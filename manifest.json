@@ -1,0 +1,62 @@
+{
+  "name": "codex-async",
+  "version": "0.1.0",
+  "description": "Persistent asynchronous Codex CLI jobs for Heart Portal",
+  "transport": "stdio",
+  "eager": true,
+  "command": ["node", "server.mjs"],
+  "tools": [
+    {
+      "name": "run",
+      "description": "Start a persistent Codex job in the background. Returns job_id immediately; use status to poll.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "prompt": { "type": "string", "description": "Task prompt for Codex" },
+          "cwd": { "type": "string", "description": "Working directory" },
+          "model": { "type": "string", "description": "Optional Codex model" },
+          "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"] }
+        },
+        "required": ["prompt", "cwd"]
+      }
+    },
+    {
+      "name": "resume",
+      "description": "Continue a completed or interrupted Codex job. The Kit reads the stored Codex session automatically.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "job_id": { "type": "string", "description": "The earlier Codex job to continue" },
+          "prompt": { "type": "string", "description": "Follow-up prompt" },
+          "cwd": { "type": "string", "description": "Optional override; defaults to the earlier job" },
+          "model": { "type": "string", "description": "Optional override; defaults to the earlier job" },
+          "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"], "description": "Optional override; defaults to the earlier job" }
+        },
+        "required": ["job_id", "prompt"]
+      }
+    },
+    {
+      "name": "status",
+      "description": "Read a persistent job status, final answer, errors, and current Codex session ID.",
+      "params": {
+        "type": "object",
+        "properties": { "job_id": { "type": "string" } },
+        "required": ["job_id"]
+      }
+    },
+    {
+      "name": "list",
+      "description": "List recent persistent Codex jobs.",
+      "params": { "type": "object", "properties": { "limit": { "type": "number" } } }
+    },
+    {
+      "name": "cancel",
+      "description": "Stop a currently running Codex job.",
+      "params": {
+        "type": "object",
+        "properties": { "job_id": { "type": "string" } },
+        "required": ["job_id"]
+      }
+    }
+  ]
+}
