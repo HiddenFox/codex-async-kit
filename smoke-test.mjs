@@ -52,8 +52,9 @@ if (!initialJob.session_id) throw new Error("smoke job did not produce a Codex s
 const resumed = await call("tools/call", {
   name: "resume",
   arguments: {
-    job_id: jobId,
-    prompt: "Reply with exactly: CODEX_RESUME_OK. Do not run commands."
+    session_id: initialJob.session_id,
+    prompt: "Reply with exactly: CODEX_RESUME_OK. Do not run commands.",
+    cwd: "D:\\Workspace\\code\\Beings-Town"
   }
 });
 console.log(JSON.stringify(resumed));
@@ -64,7 +65,7 @@ for (let i = 0; i < 24; i++) {
   const job = JSON.parse(status.result.content[0].text);
   console.log(JSON.stringify(job));
   if (["completed", "failed", "cancelled"].includes(job.state)) {
-    if (job.parent_job_id !== jobId) throw new Error("resumed job did not retain parent_job_id");
+    if (job.resumed_from !== initialJob.session_id) throw new Error("resumed job did not retain session_id");
     break;
   }
 }

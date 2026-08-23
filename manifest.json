@@ -22,17 +22,17 @@
     },
     {
       "name": "resume",
-      "description": "Continue a completed or interrupted Codex job. The Kit reads the stored Codex session automatically.",
+      "description": "Start a new background job that continues a Codex session. Returns job_id immediately; use status to poll.",
       "params": {
         "type": "object",
         "properties": {
-          "job_id": { "type": "string", "description": "The earlier Codex job to continue" },
+          "session_id": { "type": "string", "description": "Codex session_id returned in a prior job status" },
           "prompt": { "type": "string", "description": "Follow-up prompt" },
-          "cwd": { "type": "string", "description": "Optional override; defaults to the earlier job" },
-          "model": { "type": "string", "description": "Optional override; defaults to the earlier job" },
-          "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"], "description": "Optional override; defaults to the earlier job" }
+          "cwd": { "type": "string", "description": "Working directory for this execution" },
+          "model": { "type": "string", "description": "Optional Codex model" },
+          "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"], "description": "Optional sandbox mode" }
         },
-        "required": ["job_id", "prompt"]
+        "required": ["session_id", "prompt", "cwd"]
       }
     },
     {

@@ -3,10 +3,10 @@
 ## 进程模型
 
 - Portal 启动并保持 `node server.mjs`，它是常驻的 MCP wrapper。
-- 每次调用 `run` 或 `resume`，wrapper 都新建一个 `codex exec` 子进程。
-- 对外只使用 `job_id`：`resume(job_id, prompt)` 从该 job 的状态文件自动读取内部 `session_id`，再让新进程恢复 Codex 的历史会话。
-
-这样做的原因是任务相互隔离，单个 Codex 进程崩溃或网络重连不会拖垮其他任务。代价是每项任务都会有一次 CLI 启动开销。
+- `run` 与 `resume` 都会新建一个 `codex exec` 子进程；MCP wrapper 本身由 Portal 常驻。
+- `run` 返回这次执行的 `job_id`。任务启动后，调用 `status(job_id)` 可取得 Codex 原生 `session_id`。
+- `resume(session_id, prompt, cwd)` 会新建一条异步执行，并让新进程恢复指定的 Codex 历史会话。`session_id` 是唯一的会话标识，不绑定“项目”或旧 `job_id`。
+- `job_id` 只标识一次异步运行，用于 `status`、`cancel`、日志和排障。
 
 ## 长任务
 
@@ -22,7 +22,7 @@ Kit 不在内部定时向 Portal 推送结果，也不自行“卡住等待”�
 
 ## 日志位置
 
-- `jobs/<job_id>.json`：任务当前摘要，包括内部 `session_id`、状态、PID、最终答复、退出码与最后 100 条 stdout 事件。调用方只需保留 `job_id`；每次 `resume(job_id, prompt)` 都自动读取其中的 session。
+- `jobs/<job_id>.json`：任务当前摘要，包括 Codex 原生 `session_id`、状态、PID、最终答复、退出码与最后 100 条 stdout 事件。先用 `status(job_id)` 取得 `session_id`，后续可独立调用 `resume(session_id, prompt, cwd)`。
 - `jobs/<job_id>.events.jsonl`：该任务完整事件流。每行一个 JSON，包含 Codex stdout JSON 事件、stderr 块和生命周期事件。
 - `logs/runtime-YYYY-MM-DD.jsonl`：Kit 级运行日志，记录 job 创建、启动、取消、进程启动失败和结束状态。
 
