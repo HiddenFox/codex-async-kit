@@ -8,6 +8,34 @@
 - `resume(session_id, prompt, cwd)` 会新建一条异步执行，并让新进程恢复指定的 Codex 历史会话。`session_id` 是唯一的会话标识，不绑定“项目”或旧 `job_id`。
 - `job_id` 只标识一次异步运行，用于 `status`、`cancel`、日志和排障。
 
+## 接口契约
+
+`manifest.json` 是机器可读的完整接口定义；Portal/MCP 客户端可通过 `tools/list` 发现它。README 说明调用语义与 ID 生命周期。
+
+| 接口 | 必填参数 | 立即返回 | 用途 |
+|---|---|---|---|
+| `run` | `prompt`, `cwd` | `job_id` | 新建一次后台 Codex 执行。可选：`model`、`sandbox`。 |
+| `status` | `job_id` | 该次运行的状态、事件摘要、最终结果、`session_id` | 轮询一次运行的进度，或在完成后取得可复用的 Codex 会话 ID。 |
+| `resume` | `session_id`, `prompt`, `cwd` | 新 `job_id` | 新建一次后台执行，并恢复指定的 Codex 会话。可选：`model`、`sandbox`。 |
+| `list` | 无 | 最近 job 列表 | 可选 `limit` 控制数量。 |
+| `cancel` | `job_id` | 取消后的 job 状态 | 终止仍在运行中的这一次执行。 |
+
+### 两个 ID
+
+- `session_id`：Codex 原生会话标识。它代表对话/工作上下文；调用者可自行保存、传递，并直接用于 `resume(session_id, ...)`。Kit 不引入 `project_id`，也不要求通过旧 `job_id` 才能续接。
+- `job_id`：Kit 为一次后台进程生成的运行句柄。它不代表会话，只用于查询 `status(job_id)`、调用 `cancel(job_id)` 和查找本次运行的日志。一次 `resume` 会产生新的 `job_id`，但继续同一个 `session_id`。
+
+### 最短调用流程
+
+```text
+1. run(prompt, cwd) -> job_id
+2. status(job_id) -> running | completed | failed | cancelled，以及 session_id
+3. resume(session_id, follow_up_prompt, cwd) -> 新 job_id
+4. status(新 job_id)
+```
+
+`run` 的 `session_id` 初始为空；Codex 开始输出会话事件后，Kit 将其持久化到该 job 的状态中。应在 `status(job_id)` 返回 `session_id` 后再调用 `resume`。
+
 ## 长任务
 
 `run` 只负责：创建 job 状态文件、启动子进程、返回 `job_id`。它不等待 Codex 完成，因此调用本身不会因几十分钟的任务而占用 MCP 请求。
