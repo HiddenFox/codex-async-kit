@@ -35,8 +35,11 @@ function codexCommand() {
   return join(process.env.APPDATA, "npm", "node_modules", "@openai", "codex", "node_modules", "@openai", "codex-win32-x64", "vendor", "x86_64-pc-windows-msvc", "bin", "codex.exe");
 }
 function args(job) {
-  if (job.resumed_from) return ["exec", "resume", "--json", "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.resumed_from, job.prompt];
-  return ["exec", "--json", "--cd", job.cwd, "--sandbox", job.sandbox || DEFAULT_SANDBOX, "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.prompt];
+  const profile = job.profile ? ["-p", job.profile] : [];
+  const sandbox = job.sandbox || DEFAULT_SANDBOX;
+  const sandboxConfig = ["-c", `sandbox_mode="${sandbox}"`];
+  if (job.resumed_from) return ["exec", ...profile, ...sandboxConfig, "resume", "--json", "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.resumed_from, job.prompt];
+  return ["exec", ...profile, "--json", "--cd", job.cwd, "--sandbox", sandbox, "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.prompt];
 }
 function update(job, item) {
   if (item.type === "thread.started" && item.thread_id) job.session_id = item.thread_id;

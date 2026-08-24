@@ -14,7 +14,8 @@
         "properties": {
           "prompt": { "type": "string", "description": "Task prompt for Codex" },
           "cwd": { "type": "string", "description": "Working directory" },
-          "model": { "type": "string", "description": "Optional Codex model" },
+          "model": { "type": "string", "description": "Optional Codex model; mutually exclusive with profile" },
+          "profile": { "type": "string", "description": "Optional Codex profile passed as codex exec -p <profile>; mutually exclusive with model" },
           "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"] }
         },
         "required": ["prompt", "cwd"]
@@ -29,7 +30,8 @@
           "session_id": { "type": "string", "description": "Codex session_id returned in a prior job status" },
           "prompt": { "type": "string", "description": "Follow-up prompt" },
           "cwd": { "type": "string", "description": "Working directory for this execution" },
-          "model": { "type": "string", "description": "Optional Codex model" },
+          "model": { "type": "string", "description": "Optional Codex model; mutually exclusive with profile" },
+          "profile": { "type": "string", "description": "Optional Codex profile passed as codex exec -p <profile>; mutually exclusive with model" },
           "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"], "description": "Optional sandbox mode" }
         },
         "required": ["session_id", "prompt", "cwd"]

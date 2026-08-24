@@ -33,6 +33,7 @@ const started = await call("tools/call", {
   name: "run",
   arguments: {
     cwd: "D:\\Workspace\\code\\Beings-Town",
+    profile: "architect",
     sandbox: "read-only",
     prompt: "Reply with exactly: CODEX_ASYNC_OK. Do not run commands."
   }
@@ -54,7 +55,9 @@ const resumed = await call("tools/call", {
   arguments: {
     session_id: initialJob.session_id,
     prompt: "Reply with exactly: CODEX_RESUME_OK. Do not run commands.",
-    cwd: "D:\\Workspace\\code\\Beings-Town"
+    cwd: "D:\\Workspace\\code\\Beings-Town",
+    profile: "architect",
+    sandbox: "read-only"
   }
 });
 console.log(JSON.stringify(resumed));
@@ -66,6 +69,7 @@ for (let i = 0; i < 24; i++) {
   console.log(JSON.stringify(job));
   if (["completed", "failed", "cancelled"].includes(job.state)) {
     if (job.resumed_from !== initialJob.session_id) throw new Error("resumed job did not retain session_id");
+    if (job.profile !== "architect" || job.sandbox !== "read-only") throw new Error("resumed job did not retain requested role configuration");
     break;
   }
 }

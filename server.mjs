@@ -40,11 +40,13 @@ function validateCwd(cwd) {
 }
 function workerPath() { return join(KIT_HOME, "worker.mjs"); }
 
-async function startJob({ prompt, cwd, model, sandbox, sessionId = null, parentJobId = null }) {
+async function startJob({ prompt, cwd, model, profile, sandbox, sessionId = null, parentJobId = null }) {
   if (!prompt || typeof prompt !== "string") throw new Error("prompt is required");
+  if (model && profile) throw new Error("model and profile are mutually exclusive");
+  if (profile && (!/^[a-z0-9_-]+$/i.test(profile))) throw new Error("profile must contain only letters, numbers, underscores, or hyphens");
   const job = {
     job_id: `codex-${randomUUID()}`, state: "queued", created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    cwd: validateCwd(cwd), model: model || null, sandbox: sandbox || DEFAULT_SANDBOX, prompt,
+    cwd: validateCwd(cwd), model: model || null, profile: profile || null, sandbox: sandbox || DEFAULT_SANDBOX, prompt,
     parent_job_id: parentJobId, resumed_from: sessionId, session_id: sessionId, last_message: null,
     error: null, exit_code: null, usage: null, events: []
   };
@@ -58,9 +60,9 @@ async function startJob({ prompt, cwd, model, sandbox, sessionId = null, parentJ
   await logEvent(job.job_id, "worker.spawned", { worker_pid: worker.pid });
   return compactJob(job);
 }
-async function resumeJob({ sessionId, prompt, cwd, model, sandbox }) {
+async function resumeJob({ sessionId, prompt, cwd, model, profile, sandbox }) {
   if (!sessionId || typeof sessionId !== "string") throw new Error("resume requires a Codex session_id");
-  return startJob({ prompt, cwd, model, sandbox, sessionId });
+  return startJob({ prompt, cwd, model, profile, sandbox, sessionId });
 }
 async function listJobs(limit = 20) {
   await ensureStorage();
@@ -78,8 +80,8 @@ async function cancelJob(jobId) {
   return compactJob(job);
 }
 const tools = [
-  { name: "run", description: "Start a persistent Codex job in the background. Returns job_id immediately; use status to poll.", inputSchema: { type: "object", properties: { prompt: { type: "string" }, cwd: { type: "string" }, model: { type: "string" }, sandbox: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"] } }, required: ["prompt", "cwd"] } },
-  { name: "resume", description: "Start a new background job that continues a Codex session. Returns job_id immediately; use status to poll.", inputSchema: { type: "object", properties: { session_id: { type: "string", description: "Codex session_id returned in a prior job status" }, prompt: { type: "string" }, cwd: { type: "string" }, model: { type: "string" }, sandbox: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"] } }, required: ["session_id", "prompt", "cwd"] } },
+  { name: "run", description: "Start a persistent Codex job in the background. Returns job_id immediately; use status to poll.", inputSchema: { type: "object", properties: { prompt: { type: "string" }, cwd: { type: "string" }, model: { type: "string", description: "Optional Codex model; mutually exclusive with profile" }, profile: { type: "string", description: "Optional Codex profile; mutually exclusive with model" }, sandbox: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"] } }, required: ["prompt", "cwd"] } },
+  { name: "resume", description: "Start a new background job that continues a Codex session. Returns job_id immediately; use status to poll.", inputSchema: { type: "object", properties: { session_id: { type: "string", description: "Codex session_id returned in a prior job status" }, prompt: { type: "string" }, cwd: { type: "string" }, model: { type: "string", description: "Optional Codex model; mutually exclusive with profile" }, profile: { type: "string", description: "Optional Codex profile; mutually exclusive with model" }, sandbox: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"] } }, required: ["session_id", "prompt", "cwd"] } },
   { name: "status", description: "Read current status for a Codex job.", inputSchema: { type: "object", properties: { job_id: { type: "string" } }, required: ["job_id"] } },
   { name: "list", description: "List recent Codex jobs.", inputSchema: { type: "object", properties: { limit: { type: "number" } } } },
   { name: "cancel", description: "Stop an active Codex job.", inputSchema: { type: "object", properties: { job_id: { type: "string" } }, required: ["job_id"] } }
@@ -99,7 +101,7 @@ process.stdin.on("data", async (chunk) => {
         const { name, arguments: args = {} } = request.params;
         let result;
         if (name === "run") result = await startJob(args);
-        else if (name === "resume") result = await resumeJob({ sessionId: args.session_id, prompt: args.prompt, cwd: args.cwd, model: args.model, sandbox: args.sandbox });
+        else if (name === "resume") result = await resumeJob({ sessionId: args.session_id, prompt: args.prompt, cwd: args.cwd, model: args.model, profile: args.profile, sandbox: args.sandbox });
         else if (name === "status") result = compactJob(await loadJob(args.job_id));
         else if (name === "list") result = await listJobs(args.limit);
         else if (name === "cancel") result = await cancelJob(args.job_id);
