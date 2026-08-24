@@ -2,7 +2,24 @@
 
 ## 进程模型
 
-- Portal 启动并保持 `node server.mjs`，它是常驻的 MCP wrapper。
+### 角色与生命周期
+
+这里有两个不同的 MCP 概念：
+
+- `node server.mjs` 是 **codex-async Kit 自己的 MCP server**。Portal 按 `manifest.json` 的 `eager: true` 配置启动它，并通过 stdio 与它通信；它通常存活到 Portal 关闭、Kit 重载或该 MCP stdio 会话断开为止。
+- Kit **不会启动或调用 `codex mcp-server`**。它使用的是 Codex CLI 的一次性命令 `codex exec ...`，而不是让 Codex 作为 MCP server 常驻。
+
+一次 `run` 或 `resume` 的进程关系为：
+
+```text
+Portal
+  └─ node server.mjs                 Kit 的常驻 MCP server
+       └─ node worker.mjs <job_id>   本次后台任务
+            └─ codex exec ...        本次 Codex CLI 执行
+```
+
+任务执行期间，`worker.mjs` 与 `codex exec` 存活；任务完成、失败或取消后，两者退出。因此无任务时，任务管理器中找不到 `codex.exe` 是预期行为，不代表历史任务或可恢复会话丢失。
+
 - `run` 与 `resume` 都会新建一个 `codex exec` 子进程；MCP wrapper 本身由 Portal 常驻。
 - `run` 返回这次执行的 `job_id`。任务启动后，调用 `status(job_id)` 可取得 Codex 原生 `session_id`。
 - `resume(session_id, prompt, cwd)` 会新建一条异步执行，并让新进程恢复指定的 Codex 历史会话。`session_id` 是唯一的会话标识，不绑定“项目”或旧 `job_id`。
