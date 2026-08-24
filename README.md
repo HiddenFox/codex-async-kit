@@ -1,26 +1,4 @@
-# 运行与排查说明
-
-## 角色配置
-
-三个角色使用 Codex 原生 profile 固定模型。profile 位于 `%USERPROFILE%\\.codex\\<role>.config.toml`，在每次 `codex exec` 启动时叠加到全局 `config.toml`；它们不启动常驻 Agent，也不改变全局默认模型。
-
-| 角色 | Profile | 模型 | 职责边界 |
-|---|---|---|---|
-| Architect Agent | `architect` | `gpt-5.6-sol` | 复杂分析、架构与接口设计、任务拆分、风险和验收矩阵。默认只读；不修改生产代码，不将本地证据称为真实环境验证。 |
-| Developer Agent | `developer` | `gpt-5.6-terra` | 在批准的任务书、文件范围和验收标准内实现代码及贴近实现的单元测试。不自行扩大范围或重定架构。 |
-| Tester Agent | `tester` | `gpt-5.6-luna` | 独立设计和执行正反向测试、审查覆盖缺口。可以新增或修改测试代码、fixtures 与测试说明；不得修改被测生产实现。任务书必须列出允许写入的测试文件范围，且不能把 mock 或单测当作真实集成成功。 |
-
-调用时应二选一传入 `profile` 或 `model`：`profile` 适用于固定角色，worker 会传为 `codex exec -p <profile>`；`model` 只用于没有角色归属的临时任务或明确覆盖模型的实验。两者同时传入会被拒绝，避免执行身份与记录不一致。
-
-```text
-Architect: profile="architect", sandbox="read-only"
-Developer: profile="developer", sandbox="workspace-write"
-Tester:    profile="tester", sandbox="workspace-write"（prompt 限定仅允许修改测试文件）
-```
-
-profile 会由异步 Kit 写入任务记录，并在每个一次性 `codex exec` 进程中生效；任务结束后不会留下 Codex Agent 进程。`resume` 也可重新传入同一 profile，保持这次续接执行的角色配置可追溯。
-
-每个任务都应在 prompt 首部注明角色、允许范围、禁止事项和验收标准。主线程负责批准 Architect 的方案，并将三个角色的结果汇总为“代码已实现 / 本地测试已通过 / 真实环境已验证”三个独立结论。
+# Codex Async Kit 使用说明
 
 ## 进程模型
 
@@ -53,11 +31,28 @@ Portal
 
 | 接口 | 必填参数 | 立即返回 | 用途 |
 |---|---|---|---|
-| `run` | `prompt`, `cwd` | `job_id` | 新建一次后台 Codex 执行。可选：`model`、`sandbox`。 |
+| `run` | `prompt`, `cwd` | `job_id` | 新建一次后台 Codex 执行。可选：`profile` 或 `model`（二选一）、`sandbox`。 |
 | `status` | `job_id` | 该次运行的状态、事件摘要、最终结果、`session_id` | 轮询一次运行的进度，或在完成后取得可复用的 Codex 会话 ID。 |
-| `resume` | `session_id`, `prompt`, `cwd` | 新 `job_id` | 新建一次后台执行，并恢复指定的 Codex 会话。可选：`model`、`sandbox`。 |
+| `resume` | `session_id`, `prompt`, `cwd` | 新 `job_id` | 新建一次后台执行，并恢复指定的 Codex 会话。可选：`profile` 或 `model`（二选一）、`sandbox`。 |
 | `list` | 无 | 最近 job 列表 | 可选 `limit` 控制数量。 |
 | `cancel` | `job_id` | 取消后的 job 状态 | 终止仍在运行中的这一次执行。 |
+
+## 执行配置
+
+### Codex Profile（可选）
+
+Kit 可以把 Codex 原生 profile 传给每次后台执行。profile 是调用者本机的 Codex 配置预设，用于固定模型、推理强度或其他适合团队工作流的 Codex 设置；它不启动常驻 Agent，也不会修改全局默认配置。
+
+使用前，请由各使用者自行完成以下检查：
+
+1. 在本机 Codex 配置目录中创建并验证所需的 profile。profile 的文件位置、支持字段和认证要求应以本机 `codex` 版本及官方文档为准。
+2. 先在终端使用同一个 profile 成功执行一次简单的 `codex exec`，确认该 profile 可用且当前账号有权使用其中指定的模型。
+3. 调用 Kit 时传入 profile 名称，例如 `profile="review"`。Kit 会将其传为 `codex exec -p review`。
+4. 为每个任务在 prompt 中明确工作范围、禁止事项和验收标准；profile 只提供执行配置，不替代任务边界。
+
+`profile` 与 `model` 只能二选一。`profile` 适合复用已经验证的本机配置；`model` 适合没有 profile 的临时调用或需要明确覆盖模型的实验。两者同时传入会被拒绝，避免任务记录与实际执行配置不一致。
+
+profile 名称、模型选择、角色划分和 sandbox 策略由各团队自行决定。对于会修改代码的任务，建议先在 prompt 中限定允许写入的文件范围，并把“代码已实现”“本地测试通过”和“真实环境验证”作为独立结论记录。
 
 ### 两个 ID
 
