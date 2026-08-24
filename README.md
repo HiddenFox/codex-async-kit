@@ -8,14 +8,14 @@
 |---|---|---|---|
 | Architect Agent | `architect` | `gpt-5.6-sol` | 复杂分析、架构与接口设计、任务拆分、风险和验收矩阵。默认只读；不修改生产代码，不将本地证据称为真实环境验证。 |
 | Developer Agent | `developer` | `gpt-5.6-terra` | 在批准的任务书、文件范围和验收标准内实现代码及贴近实现的单元测试。不自行扩大范围或重定架构。 |
-| Tester Agent | `tester` | `gpt-5.6-luna` | 独立设计和执行正反向测试、审查覆盖缺口。默认只读；不修改被测实现，不把 mock 或单测当作真实集成成功。 |
+| Tester Agent | `tester` | `gpt-5.6-luna` | 独立设计和执行正反向测试、审查覆盖缺口。可以新增或修改测试代码、fixtures 与测试说明；不得修改被测生产实现。任务书必须列出允许写入的测试文件范围，且不能把 mock 或单测当作真实集成成功。 |
 
 当前 `codex-async` 的 `run` / `resume` 接口已经支持逐任务 `model` 参数，worker 会传为 `codex exec --model <model>`。因此通过 Portal 调用时，按角色显式传模型：
 
 ```text
 Architect: model="gpt-5.6-sol", sandbox="read-only"
 Developer: model="gpt-5.6-terra", sandbox="workspace-write"
-Tester:    model="gpt-5.6-luna", sandbox="read-only"
+Tester:    model="gpt-5.6-luna", sandbox="workspace-write"（prompt 限定仅允许修改测试文件）
 ```
 
 profile 与 Kit 的 `model` 参数是两种入口：直接使用 CLI 时用 `codex exec -p architect ...`；从 Portal 发异步任务时使用 `model` 参数。两者都在一次性 `codex exec` 进程中生效，任务结束后不会留下 Codex Agent 进程。
