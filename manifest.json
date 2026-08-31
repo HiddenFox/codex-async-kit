@@ -25,7 +25,7 @@
       }
     ],
     "platforms": ["windows", "macos", "linux"],
-    "post_install": "The kit can run without Grove usage reporting. To enable reporting, configure GROVE_TOKEN in the kit's grove.env file or process environment."
+    "post_install": "After extraction, create the kit-local grove.env file shown in the setup guide before restarting Portal. Set GROVE_TOKEN to the installer's own Grove token; never reuse the publisher token. GROVE_KIT_ID defaults to OteJGwtOzLqL7jmyZ2PfM and GROVE_API_BASE defaults to https://beings.town. The kit runs without GROVE_TOKEN, but usage reporting is then disabled."
   },
   "tools": [
     {

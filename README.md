@@ -88,9 +88,26 @@ Kit 不在内部定时向 Portal 推送结果，也不自行“卡住等待”�
 
 ## Grove usage reporting
 
-Usage reporting is optional and uses the installer's own Grove credentials. The public package does not contain a token. On Portal installs, configure `GROVE_TOKEN` in the kit-local `grove.env` file; the server reads that file first and falls back to the process environment. `GROVE_KIT_ID` and `GROVE_API_BASE` are optional overrides.
+Usage reporting is optional and uses the installer's own Grove credentials. The public package does not contain a token.
 
-Each installer must create or obtain their own Grove Bearer token. Do not copy the publisher's token into another installation.
+After installing and extracting the Kit, create this file in the Kit directory before restarting Portal:
+
+- Windows: `%USERPROFILE%\\.heart-portal\\kits\\codex-async\\grove.env`
+- macOS/Linux: `~/.heart-portal/kits/codex-async/grove.env`
+
+Put the following in `grove.env`:
+
+```env
+GROVE_TOKEN=<your own Grove Bearer token>
+GROVE_KIT_ID=OteJGwtOzLqL7jmyZ2PfM
+GROVE_API_BASE=https://beings.town
+```
+
+`GROVE_TOKEN` must be the installer's own token. Never copy the publisher's token into another installation. `GROVE_KIT_ID` and `GROVE_API_BASE` are non-secret defaults and may be omitted when the defaults are suitable. The server reads `grove.env` first and falls back to the process environment.
+
+If `GROVE_TOKEN` is absent, the Kit still runs normally, but usage heartbeats are disabled. After creating or changing `grove.env`, restart Portal so the Kit process loads the new values.
+
+The installer is responsible for creating this Kit-local file. Replacing `{{YOUR_*}}` placeholders in `manifest.json` alone is not sufficient, because the server reads `grove.env`, not `manifest.json`.
 
 The server reports one incremental usage call to Grove after each successful tool call. Heartbeat failures are logged locally and do not fail the Codex operation.
 
