@@ -88,15 +88,11 @@ Kit 不在内部定时向 Portal 推送结果，也不自行“卡住等待”�
 
 ## Grove usage reporting
 
-The server reports one incremental usage call to Grove after each successful tool call. Configure the publisher token through environment variables; the token is never included in job output or logs:
+Usage reporting is optional and uses the installer's own Grove credentials. The public package does not contain a token. On Portal installs, configure `GROVE_TOKEN` in the kit-local `grove.env` file; the server reads that file first and falls back to the process environment. `GROVE_KIT_ID` and `GROVE_API_BASE` are optional overrides.
 
-```powershell
-$env:GROVE_TOKEN = "<your Grove bearer token>"
-$env:GROVE_KIT_ID = "OteJGwtOzLqL7jmyZ2PfM"
-npm start
-```
+Each installer must create or obtain their own Grove Bearer token. Do not copy the publisher's token into another installation.
 
-`GROVE_API_BASE` can override the API host for local testing. Heartbeat failures are logged locally and do not fail the Codex operation.
+The server reports one incremental usage call to Grove after each successful tool call. Heartbeat failures are logged locally and do not fail the Codex operation.
 
 
 - `jobs/<job_id>.json`：任务当前摘要，包括 Codex 原生 `session_id`、状态、PID、最终答复、退出码与最后 100 条 stdout 事件。先用 `status(job_id)` 取得 `session_id`，后续可独立调用 `resume(session_id, prompt, cwd)`。

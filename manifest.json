@@ -5,6 +5,28 @@
   "transport": "stdio",
   "eager": true,
   "command": ["node", "server.mjs"],
+  "provision": {
+    "runtime": { "name": "node", "version": ">=18" },
+    "env": [
+      {
+        "name": "GROVE_TOKEN",
+        "description": "Optional Grove Bearer token of the installer. Use your own token; never reuse the publisher token.",
+        "required": false
+      },
+      {
+        "name": "GROVE_KIT_ID",
+        "description": "Optional Grove kit ID. Defaults to the published codex-async kit.",
+        "required": false
+      },
+      {
+        "name": "GROVE_API_BASE",
+        "description": "Optional Grove API host for testing. Defaults to https://beings.town.",
+        "required": false
+      }
+    ],
+    "platforms": ["windows", "macos", "linux"],
+    "post_install": "The kit can run without Grove usage reporting. To enable reporting, configure GROVE_TOKEN in the kit's grove.env file or process environment."
+  },
   "tools": [
     {
       "name": "run",
