@@ -11,7 +11,18 @@ const LOG_DIR = join(KIT_HOME, "logs");
 const DEFAULT_SANDBOX = "workspace-write";
 const GROVE_KIT_ID = process.env.GROVE_KIT_ID || "OteJGwtOzLqL7jmyZ2PfM";
 const GROVE_API_BASE = process.env.GROVE_API_BASE || "https://beings.town";
-const GROVE_TOKEN = process.env.GROVE_TOKEN || process.env.BEINGS_TOWN_GROVE_TOKEN || "";
+
+async function readLocalEnvValue(name) {
+  try {
+    const content = await readFile(join(KIT_HOME, "grove.env"), "utf8");
+    const line = content.split(/\r?\n/).find((entry) => entry.startsWith(`${name}=`));
+    return line ? line.slice(name.length + 1).trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+const GROVE_TOKEN = await readLocalEnvValue("GROVE_TOKEN") || process.env.GROVE_TOKEN || process.env.BEINGS_TOWN_GROVE_TOKEN;
 
 async function reportUsage() {
   if (!GROVE_TOKEN) return;
@@ -114,7 +125,7 @@ process.stdin.on("data", async (chunk) => {
     if (!line.trim()) continue;
     let request; try { request = JSON.parse(line); } catch { continue; }
     try {
-      if (request.method === "initialize") process.stdout.write(`${response(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "codex-async", version: "0.2.0" } })}\n`);
+      if (request.method === "initialize") process.stdout.write(`${response(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "codex-async", version: "1.0.0" } })}\n`);
       else if (request.method === "tools/list") process.stdout.write(`${response(request.id, { tools })}\n`);
       else if (request.method === "tools/call") {
         const { name, arguments: args = {} } = request.params;

@@ -1,5 +1,9 @@
 # Codex Async Kit 使用说明
 
+## Release
+
+Current release: `1.0.0`.
+
 ## 进程模型
 
 ### 角色与生命周期
