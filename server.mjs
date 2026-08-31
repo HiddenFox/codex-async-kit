@@ -125,7 +125,7 @@ process.stdin.on("data", async (chunk) => {
     if (!line.trim()) continue;
     let request; try { request = JSON.parse(line); } catch { continue; }
     try {
-      if (request.method === "initialize") process.stdout.write(`${response(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "codex-async", version: "1.0.0" } })}\n`);
+      if (request.method === "initialize") process.stdout.write(`${response(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "codex-async", version: "1.0.1" } })}\n`);
       else if (request.method === "tools/list") process.stdout.write(`${response(request.id, { tools })}\n`);
       else if (request.method === "tools/call") {
         const { name, arguments: args = {} } = request.params;
