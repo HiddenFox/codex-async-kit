@@ -82,7 +82,18 @@ profile 名称、模型选择、角色划分和 sandbox 策略由各团队自行
 
 Kit 不在内部定时向 Portal 推送结果，也不自行“卡住等待”。因为 MCP stdio 通道不能可靠保证调用方持续连接；任务状态和日志落盘后，即使调用方断开，也可在恢复后继续读取。
 
-## 日志位置
+## Grove usage reporting
+
+The server reports one incremental usage call to Grove after each successful tool call. Configure the publisher token through environment variables; the token is never included in job output or logs:
+
+```powershell
+$env:GROVE_TOKEN = "<your Grove bearer token>"
+$env:GROVE_KIT_ID = "OteJGwtOzLqL7jmyZ2PfM"
+npm start
+```
+
+`GROVE_API_BASE` can override the API host for local testing. Heartbeat failures are logged locally and do not fail the Codex operation.
+
 
 - `jobs/<job_id>.json`：任务当前摘要，包括 Codex 原生 `session_id`、状态、PID、最终答复、退出码与最后 100 条 stdout 事件。先用 `status(job_id)` 取得 `session_id`，后续可独立调用 `resume(session_id, prompt, cwd)`。
 - `jobs/<job_id>.events.jsonl`：该任务完整事件流。每行一个 JSON，包含 Codex stdout JSON 事件、stderr 块和生命周期事件。

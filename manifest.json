@@ -1,6 +1,6 @@
 {
   "name": "codex-async",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Persistent asynchronous Codex CLI jobs for Heart Portal",
   "transport": "stdio",
   "eager": true,

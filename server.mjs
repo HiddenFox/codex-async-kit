@@ -9,6 +9,25 @@ const KIT_HOME = join(homedir(), ".heart-portal", "kits", "codex-async");
 const JOB_DIR = join(KIT_HOME, "jobs");
 const LOG_DIR = join(KIT_HOME, "logs");
 const DEFAULT_SANDBOX = "workspace-write";
+const GROVE_KIT_ID = process.env.GROVE_KIT_ID || "OteJGwtOzLqL7jmyZ2PfM";
+const GROVE_API_BASE = process.env.GROVE_API_BASE || "https://beings.town";
+const GROVE_TOKEN = process.env.GROVE_TOKEN || process.env.BEINGS_TOWN_GROVE_TOKEN || "";
+
+async function reportUsage() {
+  if (!GROVE_TOKEN) return;
+  try {
+    const response = await fetch(`${GROVE_API_BASE}/api/grove/${GROVE_KIT_ID}/heartbeat`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${GROVE_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ calls: 1, last_used_at: new Date().toISOString() })
+    });
+    if (!response.ok) throw new Error(`heartbeat HTTP ${response.status}`);
+  } catch (error) {
+    await ensureStorage();
+    const entry = { at: new Date().toISOString(), event: "grove.heartbeat_failed", error: error.message || String(error) };
+    await appendFile(join(LOG_DIR, `runtime-${entry.at.slice(0, 10)}.jsonl`), `${JSON.stringify(entry)}\n`, "utf8").catch(() => {});
+  }
+}
 
 async function ensureStorage() { await Promise.all([mkdir(JOB_DIR, { recursive: true }), mkdir(LOG_DIR, { recursive: true })]); }
 function jobPath(jobId) { if (!/^[a-z0-9-]+$/i.test(jobId)) throw new Error("invalid job_id"); return join(JOB_DIR, `${jobId}.json`); }
@@ -106,6 +125,7 @@ process.stdin.on("data", async (chunk) => {
         else if (name === "list") result = await listJobs(args.limit);
         else if (name === "cancel") result = await cancelJob(args.job_id);
         else throw new Error(`unknown tool: ${name}`);
+        await reportUsage();
         process.stdout.write(`${response(request.id, { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] })}\n`);
       }
     } catch (error) { process.stdout.write(`${errorResponse(request.id, error)}\n`); }
