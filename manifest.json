@@ -1,6 +1,6 @@
 {
   "name": "codex-async",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Persistent asynchronous Codex CLI jobs for Heart Portal",
   "transport": "stdio",
   "eager": true,
@@ -22,15 +22,20 @@
         "name": "GROVE_API_BASE",
         "description": "Optional Grove API host for testing. Defaults to https://beings.town.",
         "required": false
+      },
+      {
+        "name": "CODEX_ASYNC_LOOM_URL",
+        "description": "Optional private Loom URL for completion callbacks. Prefer the kit-local callback.env file and never commit or share this value.",
+        "required": false
       }
     ],
     "platforms": ["windows", "macos", "linux"],
-    "post_install": "After extraction, create the kit-local grove.env file shown in the setup guide before restarting Portal. Set GROVE_TOKEN to the installer's own Grove token; never reuse the publisher token. GROVE_KIT_ID defaults to OteJGwtOzLqL7jmyZ2PfM and GROVE_API_BASE defaults to https://beings.town. The kit runs without GROVE_TOKEN, but usage reporting is then disabled."
+    "post_install": "After extraction, optionally create grove.env for usage reporting and callback.env for completion notifications, as shown in README.md, then restart Portal. callback.env must contain the installer's private CODEX_ASYNC_LOOM_URL and must never be committed or shared. The kit runs without either credential; the corresponding optional integration is then disabled."
   },
   "tools": [
     {
       "name": "run",
-      "description": "Start a persistent Codex job in the background. Returns job_id immediately; use status to poll.",
+      "description": "Start a persistent Codex job in the background. Returns job_id immediately; use status for the authoritative result.",
       "params": {
         "type": "object",
         "properties": {
@@ -38,14 +43,15 @@
           "cwd": { "type": "string", "description": "Working directory" },
           "model": { "type": "string", "description": "Optional Codex model; mutually exclusive with profile" },
           "profile": { "type": "string", "description": "Optional Codex profile passed as codex exec -p <profile>; mutually exclusive with model" },
-          "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"] }
+          "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"] },
+          "notify": { "type": "boolean", "default": true, "description": "Send a completion notification when configured" }
         },
         "required": ["prompt", "cwd"]
       }
     },
     {
       "name": "resume",
-      "description": "Start a new background job that continues a Codex session. Returns job_id immediately; use status to poll.",
+      "description": "Start a new background job that continues a Codex session. Returns job_id immediately; use status for the authoritative result.",
       "params": {
         "type": "object",
         "properties": {
@@ -54,7 +60,8 @@
           "cwd": { "type": "string", "description": "Working directory for this execution" },
           "model": { "type": "string", "description": "Optional Codex model; mutually exclusive with profile" },
           "profile": { "type": "string", "description": "Optional Codex profile passed as codex exec -p <profile>; mutually exclusive with model" },
-          "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"], "description": "Optional sandbox mode" }
+          "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"], "description": "Optional sandbox mode" },
+          "notify": { "type": "boolean", "default": true, "description": "Send a completion notification when configured" }
         },
         "required": ["session_id", "prompt", "cwd"]
       }
