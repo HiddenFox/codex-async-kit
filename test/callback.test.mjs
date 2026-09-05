@@ -33,23 +33,28 @@ function sampleJob(overrides = {}) {
   };
 }
 
-async function localServer(handler) {
+async function localServer(handler, token = PLACEHOLDER_TOKEN) {
   const server = http.createServer(handler);
   await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
   const { port } = server.address();
+  const loom = new URL(`http://127.0.0.1:${port}/test-being/?ignored=value`);
+  loom.searchParams.set("token", token);
   return {
     server,
-    loomUrl: `http://127.0.0.1:${port}/test-being/?token=${PLACEHOLDER_TOKEN}`,
+    loomUrl: loom.toString(),
     close: () => new Promise((resolveClose) => server.close(resolveClose))
   };
 }
 
-test("derives secure callback URLs and strips query strings", () => {
-  const remote = deriveCallbackConfig("https://echo.beings.town/alice/?token=placeholder&ignored=value");
-  assert.equal(remote.callbackUrl, "https://echo.beings.town/alice/api/callback");
-  assert.equal(remote.token, "placeholder");
-  assert.equal(deriveCallbackConfig("https://localhost:8443/alice/?token=placeholder").callbackUrl, "http://localhost:8443/alice/api/callback");
-  assert.equal(deriveCallbackConfig("https://127.9.8.7/alice/?token=placeholder").callbackUrl, "http://127.9.8.7/alice/api/callback");
+test("derives query-authenticated callback URLs and removes unrelated query parameters", () => {
+  const remoteToken = "remote token+value";
+  const remoteLoom = new URL("https://echo.beings.town/alice/?ignored=value#fragment");
+  remoteLoom.searchParams.set("token", remoteToken);
+  const remote = deriveCallbackConfig(remoteLoom.toString());
+  assert.equal(remote.callbackUrl, `https://echo.beings.town/alice/api/callback?${new URLSearchParams({ token: remoteToken }).toString()}`);
+  assert.equal(remote.token, remoteToken);
+  assert.equal(deriveCallbackConfig("https://localhost:8443/alice/?token=placeholder&ignored=value").callbackUrl, "http://localhost:8443/alice/api/callback?token=placeholder");
+  assert.equal(deriveCallbackConfig("https://127.9.8.7/alice/?token=placeholder&ignored=value").callbackUrl, "http://127.9.8.7/alice/api/callback?token=placeholder");
   assert.throws(() => deriveCallbackConfig("http://example.com/alice/?token=secret"), CallbackConfigError);
   assert.throws(() => deriveCallbackConfig("http://127.example.com/alice/?token=secret"), CallbackConfigError);
   for (const protocol of ["ftp", "javascript", "file"]) {
@@ -62,6 +67,37 @@ test("derives secure callback URLs and strips query strings", () => {
   assert.throws(() => deriveCallbackConfig("not a URL containing secret"), CallbackConfigError);
 });
 
+test("round-trips URLSearchParams token encoding without manual concatenation", () => {
+  const token = "spaces + ampersand & slash / equals = question ?";
+  const source = new URL("https://echo.beings.town/alice/?ignored=value");
+  source.searchParams.set("token", token);
+  const config = deriveCallbackConfig(source.toString());
+  const callback = new URL(config.callbackUrl);
+  assert.equal(callback.searchParams.get("token"), token);
+  assert.equal(callback.searchParams.size, 1);
+  assert.equal(callback.search, `?${new URLSearchParams({ token }).toString()}`);
+});
+
+test("delivers URLSearchParams-encoded tokens without an authorization header", async () => {
+  const token = "space + ampersand & slash / equals = question ?";
+  let received;
+  const local = await localServer((request, response) => {
+    const requestUrl = new URL(request.url, "http://127.0.0.1");
+    received = { token: requestUrl.searchParams.get("token"), authorization: request.headers.authorization };
+    response.writeHead(204).end();
+  }, token);
+  try {
+    await deliverCallback({
+      job: sampleJob(),
+      config: deriveCallbackConfig(local.loomUrl),
+      notification: { requested: true, state: "pending", attempts: 0 }
+    });
+    assert.deepEqual(received, { token, authorization: undefined });
+  } finally {
+    await local.close();
+  }
+});
+
 test("loads callback.env first, falls back to the environment, and disables when absent", async () => {
   const directory = await mkdtemp(join(tmpdir(), "codex-callback-config-"));
   try {
@@ -70,13 +106,13 @@ test("loads callback.env first, falls back to the environment, and disables when
       kitHome: directory,
       env: { CODEX_ASYNC_LOOM_URL: "https://echo.beings.town/env-being/?token=env-placeholder" }
     });
-    assert.equal(fallback.callbackUrl, "https://echo.beings.town/env-being/api/callback");
+    assert.equal(fallback.callbackUrl, "https://echo.beings.town/env-being/api/callback?token=env-placeholder");
     await writeFile(join(directory, "callback.env"), "CODEX_ASYNC_LOOM_URL=https://echo.beings.town/file-being/?token=file-placeholder\n");
     const file = await loadCallbackConfig({
       kitHome: directory,
       env: { CODEX_ASYNC_LOOM_URL: "https://echo.beings.town/env-being/?token=env-placeholder" }
     });
-    assert.equal(file.callbackUrl, "https://echo.beings.town/file-being/api/callback");
+    assert.equal(file.callbackUrl, "https://echo.beings.town/file-being/api/callback?token=file-placeholder");
     assert.equal(file.token, "file-placeholder");
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -105,7 +141,7 @@ test("builds bounded payloads with stable identity and UTF-8-safe previews", () 
   assert.match(failed.payload.result.last_message_preview, /inspect status/);
 });
 
-test("sends the token only in Authorization and persists a redacted success", async () => {
+test("sends the token in the query without an authorization header and persists a redacted success", async () => {
   let requestRecord;
   const local = await localServer(async (request, response) => {
     let body = "";
@@ -124,11 +160,14 @@ test("sends the token only in Authorization and persists a redacted success", as
     });
     assert.equal(result.state, "delivered");
     assert.equal(result.attempts, 1);
-    assert.equal(requestRecord.url, "/test-being/api/callback");
-    assert.equal(requestRecord.authorization, `Bearer ${PLACEHOLDER_TOKEN}`);
+    const requestUrl = new URL(requestRecord.url, "http://127.0.0.1");
+    assert.equal(requestUrl.pathname, "/test-being/api/callback");
+    assert.equal(requestUrl.searchParams.get("token"), PLACEHOLDER_TOKEN);
+    assert.equal(requestUrl.searchParams.size, 1);
+    assert.equal(requestRecord.authorization, undefined);
     assert.equal(JSON.parse(requestRecord.body).task_id, sampleJob().job_id);
-    assert.ok(!JSON.stringify({ result, events, url: config.callbackUrl }).includes(PLACEHOLDER_TOKEN));
-    assert.ok(!config.callbackUrl.includes("?"));
+    assert.ok(!JSON.stringify({ result, events }).includes(PLACEHOLDER_TOKEN));
+    assert.ok(!JSON.stringify({ result, events }).includes(config.callbackUrl));
   } finally {
     await local.close();
   }
@@ -168,8 +207,9 @@ test("contains localhost redirects without following the target", async () => {
   let callbackRequests = 0;
   let sinkRequests = 0;
   let authorization = null;
+  const events = [];
   const local = await localServer((request, response) => {
-    if (request.url === "/test-being/api/callback") {
+    if (new URL(request.url, "http://127.0.0.1").pathname === "/test-being/api/callback") {
       callbackRequests += 1;
       authorization = request.headers.authorization;
       response.writeHead(302, { Location: "/sink" }).end();
@@ -183,17 +223,27 @@ test("contains localhost redirects without following the target", async () => {
       job: sampleJob(),
       config: deriveCallbackConfig(local.loomUrl),
       notification: { requested: true, state: "pending", attempts: 0 },
+      onEvent: async (name, fields) => events.push({ name, fields }),
       sleep: async () => {}
     });
     assert.equal(callbackRequests, 1);
     assert.equal(sinkRequests, 0);
-    assert.equal(authorization, `Bearer ${PLACEHOLDER_TOKEN}`);
+    assert.equal(authorization, undefined);
     assert.equal(result.state, "failed");
     assert.equal(result.attempts, 1);
     assert.equal(result.http_status, 302);
+    assert.ok(!JSON.stringify({ result, events }).includes(PLACEHOLDER_TOKEN));
+    assert.ok(!JSON.stringify({ result, events }).includes(deriveCallbackConfig(local.loomUrl).callbackUrl));
   } finally {
     await local.close();
   }
+});
+
+test("version metadata is consistent at 1.1.1", async () => {
+  const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const manifestJson = JSON.parse(await readFile(new URL("../manifest.json", import.meta.url), "utf8"));
+  assert.equal(packageJson.version, "1.1.1");
+  assert.equal(manifestJson.version, "1.1.1");
 });
 
 for (const status of [400, 401, 403, 413]) {

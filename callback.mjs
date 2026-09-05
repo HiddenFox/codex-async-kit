@@ -57,7 +57,7 @@ export function deriveCallbackConfig(loomUrl) {
   const basePath = parsed.pathname.replace(/\/+$/, "");
   if (!basePath) throw new CallbackConfigError();
   parsed.pathname = `${basePath}/api/callback`;
-  parsed.search = "";
+  parsed.search = new URLSearchParams({ token }).toString();
   parsed.hash = "";
   return { callbackUrl: parsed.toString(), token };
 }
@@ -183,7 +183,7 @@ export async function deliverCallback({
     try {
       response = await fetchImpl(config.callbackUrl, {
         method: "POST",
-        headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: built.body,
         redirect: "manual",
         signal: controller.signal

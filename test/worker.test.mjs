@@ -108,7 +108,11 @@ test("persists terminal state before callback and records delivered metadata", a
     assert.equal(received.persisted.state, "completed");
     assert.equal(received.persisted.notification.state, "delivering");
     assert.equal(received.payload.task_id, fixture.jobId);
-    assert.equal(received.request.url, "/worker-being/api/callback");
+    const callbackUrl = new URL(received.request.url, "http://127.0.0.1");
+    assert.equal(callbackUrl.pathname, "/worker-being/api/callback");
+    assert.equal(callbackUrl.searchParams.get("token"), PLACEHOLDER_TOKEN);
+    assert.equal(callbackUrl.searchParams.size, 1);
+    assert.equal(received.request.headers.authorization, undefined);
     assert.equal(job.state, "completed");
     assert.equal(job.notification.state, "delivered");
     assert.equal(job.notification.attempts, 1);

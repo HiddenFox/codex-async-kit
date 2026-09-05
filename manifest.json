@@ -1,6 +1,6 @@
 {
   "name": "codex-async",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Persistent asynchronous Codex CLI jobs for Heart Portal",
   "transport": "stdio",
   "eager": true,
@@ -25,7 +25,7 @@
       },
       {
         "name": "CODEX_ASYNC_LOOM_URL",
-        "description": "Optional private Loom URL for completion callbacks. Prefer the kit-local callback.env file and never commit or share this value.",
+        "description": "Optional private Loom URL for completion callbacks. Heart Portal v0.8.0 uses its token query parameter for callback authentication. Prefer the kit-local callback.env file and never commit or share this value.",
         "required": false
       }
     ],

@@ -1,6 +1,6 @@
 # Codex Async Kit
 
-Current release: `1.1.0`.
+Current release: `1.1.1`.
 
 Codex Async Kit runs persistent Codex CLI jobs behind a small MCP server. `run` and `resume` return a fresh `job_id` immediately, while a detached worker runs Codex and persists progress. Use `status(job_id)` for the authoritative result.
 
@@ -85,7 +85,7 @@ Set your private Loom URL locally:
 CODEX_ASYNC_LOOM_URL=https://echo.beings.town/<being_id>/?token=<loom_token>
 ```
 
-Restart Portal after changing the file. The worker derives `<loom-being-base>/api/callback`, removes the query string, and sends the token only in the `Authorization: Bearer` header. The Loom URL is a private key: never commit it, paste it into public channels, include it in logs, or reuse `GROVE_TOKEN` for callbacks. `callback.env` is ignored by Git.
+Restart Portal after changing the file. Heart Portal v0.8.0 authenticates `<loom-being-base>/api/callback` with its `?token=` query parameter. The worker derives that endpoint, preserves only the token query parameter, and sends no `Authorization: Bearer` header. The Loom URL is a private key: never commit it, paste it into public channels, include it in logs, or reuse `GROVE_TOKEN` for callbacks. `callback.env` is ignored by Git.
 
 For controlled deployments and localhost-only tests, `CODEX_ASYNC_LOOM_URL` can be supplied through the process environment when the file has no value. External callback URLs must use HTTPS. `localhost` and `127.*` use HTTP to support local test servers.
 

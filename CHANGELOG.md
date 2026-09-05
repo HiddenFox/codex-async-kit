@@ -1,5 +1,9 @@
 # Release notes
 
+## 1.1.1
+
+- Updated Heart Portal v0.8.0 completion callbacks to authenticate with the Loom token query parameter and no Bearer header.
+
 ## 1.1.0
 
 - Added optional, durable completion notifications for naturally completed and failed Codex jobs.
