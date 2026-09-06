@@ -1,6 +1,6 @@
 # Codex Async Kit
 
-Current release: `1.1.1`.
+Current release: `1.1.2`.
 
 Codex Async Kit runs persistent Codex CLI jobs behind a small MCP server. `run` and `resume` return a fresh `job_id` immediately, while a detached worker runs Codex and persists progress. Use `status(job_id)` for the authoritative result.
 
@@ -57,51 +57,45 @@ The callback is an attention signal, not a result channel. Its bounded preview c
 
 Delivery uses at most three attempts, with 2-second and 4-second backoffs. Connection errors, timeouts, HTTP 429, and HTTP 5xx are retried. Other HTTP 4xx responses are not retried. Each request has a 30-second timeout. Callback failure never changes the Codex terminal state.
 
-Notification states exposed by `status` are:
-
-- `pending`: the terminal result is persisted and delivery has not been acknowledged.
-- `delivering`: an HTTP attempt is active.
-- `delivered`: Heart returned an HTTP 2xx response.
-- `failed`: configuration was invalid, payload construction failed, or bounded delivery attempts were exhausted.
-- `disabled`: callback configuration is absent.
-- `suppressed`: the caller used `notify: false` or explicitly cancelled the job.
-
-The metadata also reports `attempts`, `last_attempt_at`, `delivered_at`, `http_status`, and a bounded redacted `last_error`.
+Notification states exposed by `status` are `pending`, `delivering`, `delivered`, `failed`, `disabled`, and `suppressed`. The metadata also reports `attempts`, `last_attempt_at`, `delivered_at`, `http_status`, and a bounded redacted `last_error`.
 
 ### SBS boundary
 
-A successful callback means Heart acknowledged the completion signal. It does not prove that Side by Side (SBS) immediately woke the Being. When SBS is enabled, the signal is eligible to influence a later autonomous breath, with no fixed latency SLA. When SBS is disabled, Heart may retain the signal for a later human-triggered or scheduled breath. Continue using `status(job_id)` as the fallback in either case.
+A successful callback means Heart acknowledged the completion signal. It does not prove that Side by Side (SBS) immediately woke the Being. When SBS is enabled, the signal is eligible to influence a later autonomous breath, with no fixed latency SLA. Continue using `status(job_id)` as the fallback.
 
-## Private callback setup
+## Private configuration
 
-Copy `callback.env.example` to the Kit directory as `callback.env`:
+Copy `codex-async.env.example` to the Kit directory as `codex-async.env`:
 
-- Windows: `%USERPROFILE%\.heart-portal\kits\codex-async\callback.env`
-- macOS/Linux: `~/.heart-portal/kits/codex-async/callback.env`
+- Windows: `%USERPROFILE%\.heart-portal\kits\codex-async\codex-async.env`
+- macOS/Linux: `~/.heart-portal/kits/codex-async/codex-async.env`
 
-Set your private Loom URL locally:
-
-```env
-CODEX_ASYNC_LOOM_URL=https://echo.beings.town/<being_id>/?token=<loom_token>
-```
-
-Restart Portal after changing the file. Heart Portal v0.8.0 authenticates `<loom-being-base>/api/callback` with its `?token=` query parameter. The worker derives that endpoint, preserves only the token query parameter, and sends no `Authorization: Bearer` header. The Loom URL is a private key: never commit it, paste it into public channels, include it in logs, or reuse `GROVE_TOKEN` for callbacks. `callback.env` is ignored by Git.
-
-For controlled deployments and localhost-only tests, `CODEX_ASYNC_LOOM_URL` can be supplied through the process environment when the file has no value. External callback URLs must use HTTPS. `localhost` and `127.*` use HTTP to support local test servers.
-
-Missing callback configuration disables notification without affecting jobs. Invalid configuration records a redacted notification failure without changing a completed Codex job into a failed one.
-
-## Grove usage reporting
-
-Usage reporting remains optional and independent of Heart callbacks. Create `grove.env` in the Kit directory when reporting is desired:
+The single private file contains both optional integrations:
 
 ```env
 GROVE_TOKEN=<your own Grove Bearer token>
 GROVE_KIT_ID=OteJGwtOzLqL7jmyZ2PfM
 GROVE_API_BASE=https://beings.town
+CODEX_ASYNC_LOOM_URL=https://echo.beings.town/<being_id>/?token=<loom_token>
 ```
 
-Use only the installer's Grove token. The server reads `grove.env` first and then the process environment. Without `GROVE_TOKEN`, jobs continue normally and usage reporting is disabled. A failed Grove heartbeat is logged locally and does not fail the MCP operation.
+Restart Portal after changing the file. To upgrade from `1.1.1`, merge values from `grove.env` and `callback.env` into `codex-async.env`, then remove the old files. They are no longer read.
+
+Heart Portal v0.8.0 authenticates `<loom-being-base>/api/callback` with its `?token=` query parameter. The worker derives that endpoint, preserves only the token query parameter, and sends no `Authorization: Bearer` header. The Loom URL is a private key: never commit it, paste it into public channels, include it in logs, or reuse `GROVE_TOKEN` for callbacks.
+
+For controlled deployments and localhost-only tests, any setting can be supplied through the process environment when the file has no value. External callback URLs must use HTTPS. `localhost` and `127.*` use HTTP to support local test servers.
+
+Without callback configuration, notification is disabled without affecting jobs. Without `GROVE_TOKEN`, usage reporting is disabled. A failed callback or Grove heartbeat never fails the MCP operation.
+
+## Release packaging
+
+Create the Grove-ready archive with:
+
+```text
+npm run package:release
+```
+
+The script validates version consistency and writes `target/codex-async-<version>.tar.gz`. It uses an explicit release whitelist, so private configuration, tests, task documents, Git metadata, dependencies, and runtime data are excluded.
 
 ## Development and verification
 
@@ -112,5 +106,3 @@ npm test
 ```
 
 Tests use temporary directories, placeholder credentials, fake Codex processes, and localhost callback servers. They do not contact Heart or any other external callback endpoint.
-
-No live callback or SBS acceptance test should run until an independent reviewer has verified credential handling, terminal ordering, cancellation suppression, callback identity, schemas, and version surfaces. Live acceptance must report callback delivery, Heart inbox persistence, immediate callback breath, and later SBS attention as separate observations.

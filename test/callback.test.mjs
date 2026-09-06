@@ -98,7 +98,7 @@ test("delivers URLSearchParams-encoded tokens without an authorization header", 
   }
 });
 
-test("loads callback.env first, falls back to the environment, and disables when absent", async () => {
+test("loads codex-async.env first, falls back to the environment, and disables when absent", async () => {
   const directory = await mkdtemp(join(tmpdir(), "codex-callback-config-"));
   try {
     assert.equal(await loadCallbackConfig({ kitHome: directory, env: {} }), null);
@@ -107,7 +107,7 @@ test("loads callback.env first, falls back to the environment, and disables when
       env: { CODEX_ASYNC_LOOM_URL: "https://echo.beings.town/env-being/?token=env-placeholder" }
     });
     assert.equal(fallback.callbackUrl, "https://echo.beings.town/env-being/api/callback?token=env-placeholder");
-    await writeFile(join(directory, "callback.env"), "CODEX_ASYNC_LOOM_URL=https://echo.beings.town/file-being/?token=file-placeholder\n");
+    await writeFile(join(directory, "codex-async.env"), "CODEX_ASYNC_LOOM_URL=https://echo.beings.town/file-being/?token=file-placeholder\n");
     const file = await loadCallbackConfig({
       kitHome: directory,
       env: { CODEX_ASYNC_LOOM_URL: "https://echo.beings.town/env-being/?token=env-placeholder" }
@@ -239,11 +239,11 @@ test("contains localhost redirects without following the target", async () => {
   }
 });
 
-test("version metadata is consistent at 1.1.1", async () => {
+test("version metadata is consistent at 1.1.2", async () => {
   const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
   const manifestJson = JSON.parse(await readFile(new URL("../manifest.json", import.meta.url), "utf8"));
-  assert.equal(packageJson.version, "1.1.1");
-  assert.equal(manifestJson.version, "1.1.1");
+  assert.equal(packageJson.version, "1.1.2");
+  assert.equal(manifestJson.version, "1.1.2");
 });
 
 for (const status of [400, 401, 403, 413]) {
@@ -324,11 +324,12 @@ test("payload construction failures do not attempt delivery", async () => {
   assert.equal(events[0].fields.error_category, "payload");
 });
 
-test("the callback example contains placeholders and callback.env is ignored", async () => {
-  const example = await readFile(new URL("../callback.env.example", import.meta.url), "utf8");
+test("the unified config example contains placeholders and private config is ignored", async () => {
+  const example = await readFile(new URL("../codex-async.env.example", import.meta.url), "utf8");
   const ignore = await readFile(new URL("../.gitignore", import.meta.url), "utf8");
-  assert.match(example, /<being_id>/);
-  assert.match(example, /<loom_token>/);
-  assert.match(ignore, /^callback\.env$/m);
+  assert.match(example, /\{\{YOUR_GROVE_TOKEN\}\}/);
+  assert.match(example, /\{\{YOUR_BEING_ID\}\}/);
+  assert.match(example, /\{\{YOUR_LOOM_TOKEN\}\}/);
+  assert.match(ignore, /^codex-async\.env$/m);
   assert.ok(!example.includes(PLACEHOLDER_TOKEN));
 });

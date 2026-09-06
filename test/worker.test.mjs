@@ -65,7 +65,7 @@ async function makeFixture({ notify = true, exitCode = 0, delay = 0, callbackUrl
     events: []
   };
   await writeFile(join(jobs, `${jobId}.json`), `${JSON.stringify(job, null, 2)}\n`);
-  if (callbackUrl) await writeFile(join(kitHome, "callback.env"), `CODEX_ASYNC_LOOM_URL=${callbackUrl}\n`);
+  if (callbackUrl) await writeFile(join(kitHome, "codex-async.env"), `CODEX_ASYNC_LOOM_URL=${callbackUrl}\n`);
   return {
     kitHome,
     jobId,
@@ -175,7 +175,7 @@ test("missing and malformed configuration preserve completed jobs", async (conte
     const fixture = await makeFixture();
     const hidden = "malformed-placeholder-secret";
     try {
-      await writeFile(join(fixture.kitHome, "callback.env"), `CODEX_ASYNC_LOOM_URL=not-a-url-${hidden}\n`);
+      await writeFile(join(fixture.kitHome, "codex-async.env"), `CODEX_ASYNC_LOOM_URL=not-a-url-${hidden}\n`);
       await runWorker(fixture.jobId, {
         kitHome: fixture.kitHome,
         codexExecutable: "fake-codex",

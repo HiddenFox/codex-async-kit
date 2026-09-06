@@ -1,5 +1,10 @@
 # Release notes
 
+## 1.1.2
+
+- Unified Grove reporting and Heart callback settings in one private `codex-async.env` file.
+- Added a whitelist-based release packaging script that emits a Grove-ready `tar.gz` without private, development, or runtime files.
+
 ## 1.1.1
 
 - Updated Heart Portal v0.8.0 completion callbacks to authenticate with the Loom token query parameter and no Bearer header.

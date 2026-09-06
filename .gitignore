@@ -1,5 +1,6 @@
 node_modules/
+target/
 *.env
 .env*
-grove.env
-callback.env
+codex-async.env
+# Legacy local configuration names; migrate their values to codex-async.env.

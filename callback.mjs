@@ -1,5 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { loadKitConfig, resolveConfigValue } from "./config.mjs";
 
 export const PREVIEW_MAX_BYTES = 16 * 1024;
 export const PAYLOAD_MAX_BYTES = 64 * 1024;
@@ -63,13 +62,13 @@ export function deriveCallbackConfig(loomUrl) {
 }
 
 export async function loadCallbackConfig({ kitHome, env = process.env } = {}) {
-  let fileValue = "";
+  let fileConfig = {};
   try {
-    fileValue = parseEnvValue(await readFile(join(kitHome, "callback.env"), "utf8"), "CODEX_ASYNC_LOOM_URL");
+    fileConfig = await loadKitConfig(kitHome);
   } catch (error) {
     if (error.code !== "ENOENT") throw new CallbackConfigError();
   }
-  const loomUrl = fileValue || env.CODEX_ASYNC_LOOM_URL || "";
+  const loomUrl = resolveConfigValue(fileConfig, env, "CODEX_ASYNC_LOOM_URL");
   if (!loomUrl) return null;
   return deriveCallbackConfig(loomUrl);
 }

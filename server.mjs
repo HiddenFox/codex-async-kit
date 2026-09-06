@@ -5,25 +5,17 @@ import { mkdir, readdir, readFile, rename, writeFile, appendFile } from "node:fs
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadKitConfig, resolveConfigValue } from "./config.mjs";
 
 const KIT_HOME = process.env.CODEX_ASYNC_KIT_HOME || join(homedir(), ".heart-portal", "kits", "codex-async");
 const JOB_DIR = join(KIT_HOME, "jobs");
 const LOG_DIR = join(KIT_HOME, "logs");
 const DEFAULT_SANDBOX = "workspace-write";
-const GROVE_KIT_ID = process.env.GROVE_KIT_ID || "OteJGwtOzLqL7jmyZ2PfM";
-const GROVE_API_BASE = process.env.GROVE_API_BASE || "https://beings.town";
+const LOCAL_CONFIG = await loadKitConfig(KIT_HOME);
+const GROVE_KIT_ID = resolveConfigValue(LOCAL_CONFIG, process.env, "GROVE_KIT_ID") || "OteJGwtOzLqL7jmyZ2PfM";
+const GROVE_API_BASE = resolveConfigValue(LOCAL_CONFIG, process.env, "GROVE_API_BASE") || "https://beings.town";
 
-async function readLocalEnvValue(name) {
-  try {
-    const content = await readFile(join(KIT_HOME, "grove.env"), "utf8");
-    const line = content.split(/\r?\n/).find((entry) => entry.startsWith(`${name}=`));
-    return line ? line.slice(name.length + 1).trim() : "";
-  } catch {
-    return "";
-  }
-}
-
-const GROVE_TOKEN = await readLocalEnvValue("GROVE_TOKEN") || process.env.GROVE_TOKEN || process.env.BEINGS_TOWN_GROVE_TOKEN;
+const GROVE_TOKEN = resolveConfigValue(LOCAL_CONFIG, process.env, "GROVE_TOKEN", "BEINGS_TOWN_GROVE_TOKEN");
 
 async function reportUsage() {
   if (!GROVE_TOKEN) return;
@@ -147,7 +139,7 @@ export function startServer(input = process.stdin, output = process.stdout) {
       if (!line.trim()) continue;
       let request; try { request = JSON.parse(line); } catch { continue; }
       try {
-        if (request.method === "initialize") output.write(`${response(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "codex-async", version: "1.1.1" } })}\n`);
+        if (request.method === "initialize") output.write(`${response(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "codex-async", version: "1.1.2" } })}\n`);
         else if (request.method === "tools/list") output.write(`${response(request.id, { tools })}\n`);
         else if (request.method === "tools/call") {
           const { name, arguments: args = {} } = request.params;
