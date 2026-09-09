@@ -2,7 +2,9 @@
 
 Current release: `1.1.2`.
 
-Codex Async Kit runs persistent Codex CLI jobs behind a small MCP server. `run` and `resume` return a fresh `job_id` immediately, while a detached worker runs Codex and persists progress. Use `status(job_id)` for the authoritative result.
+Codex Async Kit provides a durable async control plane for Codex CLI. Background `run` and `resume` calls return a fresh `job_id` immediately while a detached worker persists terminal results and Codex `session_id` values. Jobs can be inspected, cancelled, or resumed later; choose a per-job sandbox and either a Codex profile or model.
+
+When completion callbacks are configured, terminal jobs deliver a durable Inbox notification to the owning Heart so it can return to inspect the job rather than continuously poll. The Inbox notification is an attention signal, not the result channel: use `status(job_id)` for the authoritative result.
 
 ## Process and data model
 
