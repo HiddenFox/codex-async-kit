@@ -39,7 +39,7 @@ test("server run/resume remain immediate, schemas agree, and cancellation is dur
       method: "initialize",
       params: { protocolVersion: "2024-11-05" }
     });
-    assert.equal(initialized.result.serverInfo.version, "1.1.2");
+    assert.equal(initialized.result.serverInfo.version, "1.1.3");
 
     const manifest = JSON.parse(await readFile(resolve("manifest.json"), "utf8"));
     for (const name of ["run", "resume"]) {

@@ -1,5 +1,9 @@
 # Release notes
 
+## 1.1.3
+
+- Clarified the Grove and README description of the durable async control plane and the distinction between Inbox notifications and authoritative job status.
+
 ## 1.1.2
 
 - Unified Grove reporting and Heart callback settings in one private `codex-async.env` file.
