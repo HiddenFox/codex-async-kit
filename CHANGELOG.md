@@ -1,5 +1,9 @@
 # Release notes
 
+## 1.1.4
+
+- Grove heartbeat now reports each terminal MCP tools/call as calls=1 plus explicit successful/failed counts (success: 1/0; failure: 0/1); heartbeat delivery remains best-effort and asynchronous Codex job terminal states are not double-counted.
+
 ## 1.1.3
 
 - Clarified the Grove and README description of the durable async control plane and the distinction between Inbox notifications and authoritative job status.

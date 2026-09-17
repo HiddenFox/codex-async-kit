@@ -17,19 +17,37 @@ const GROVE_API_BASE = resolveConfigValue(LOCAL_CONFIG, process.env, "GROVE_API_
 
 const GROVE_TOKEN = resolveConfigValue(LOCAL_CONFIG, process.env, "GROVE_TOKEN", "BEINGS_TOWN_GROVE_TOKEN");
 
-async function reportUsage() {
+function validateUsageCounts({ calls, successful, failed }) {
+  for (const [name, value] of Object.entries({ calls, successful, failed })) {
+    if (!Number.isInteger(value) || value < 0) throw new TypeError(`${name} must be a non-negative integer`);
+  }
+  if (calls !== 1 || successful + failed !== calls) {
+    throw new RangeError("heartbeat counts must describe exactly one tool call");
+  }
+}
+
+async function logHeartbeatFailure(error) {
+  try {
+    await ensureStorage();
+    const entry = { at: new Date().toISOString(), event: "grove.heartbeat_failed", error: error.message || String(error) };
+    await appendFile(join(LOG_DIR, `runtime-${entry.at.slice(0, 10)}.jsonl`), `${JSON.stringify(entry)}\n`, "utf8");
+  } catch {
+    // Heartbeat diagnostics must not affect the tool call result.
+  }
+}
+
+async function reportUsage(counts) {
+  validateUsageCounts(counts);
   if (!GROVE_TOKEN) return;
   try {
     const response = await fetch(`${GROVE_API_BASE}/api/grove/${GROVE_KIT_ID}/heartbeat`, {
       method: "POST",
       headers: { Authorization: `Bearer ${GROVE_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ calls: 1, last_used_at: new Date().toISOString() })
+      body: JSON.stringify({ ...counts, last_used_at: new Date().toISOString() })
     });
     if (!response.ok) throw new Error(`heartbeat HTTP ${response.status}`);
   } catch (error) {
-    await ensureStorage();
-    const entry = { at: new Date().toISOString(), event: "grove.heartbeat_failed", error: error.message || String(error) };
-    await appendFile(join(LOG_DIR, `runtime-${entry.at.slice(0, 10)}.jsonl`), `${JSON.stringify(entry)}\n`, "utf8").catch(() => {});
+    await logHeartbeatFailure(error);
   }
 }
 
@@ -142,16 +160,28 @@ export function startServer(input = process.stdin, output = process.stdout) {
         if (request.method === "initialize") output.write(`${response(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "codex-async", version: "1.1.3" } })}\n`);
         else if (request.method === "tools/list") output.write(`${response(request.id, { tools })}\n`);
         else if (request.method === "tools/call") {
-          const { name, arguments: args = {} } = request.params;
           let result;
-          if (name === "run") result = await startJob(args);
-          else if (name === "resume") result = await resumeJob({ sessionId: args.session_id, prompt: args.prompt, cwd: args.cwd, model: args.model, profile: args.profile, sandbox: args.sandbox, notify: args.notify });
-          else if (name === "status") result = compactJob(await loadJob(args.job_id));
-          else if (name === "list") result = await listJobs(args.limit);
-          else if (name === "cancel") result = await cancelJob(args.job_id);
-          else throw new Error(`unknown tool: ${name}`);
-          await reportUsage();
-          output.write(`${response(request.id, { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] })}\n`);
+          let handlerError;
+          let handlerFailed = false;
+          try {
+            const { name, arguments: args = {} } = request.params;
+            if (name === "run") result = await startJob(args);
+            else if (name === "resume") result = await resumeJob({ sessionId: args.session_id, prompt: args.prompt, cwd: args.cwd, model: args.model, profile: args.profile, sandbox: args.sandbox, notify: args.notify });
+            else if (name === "status") result = compactJob(await loadJob(args.job_id));
+            else if (name === "list") result = await listJobs(args.limit);
+            else if (name === "cancel") result = await cancelJob(args.job_id);
+            else throw new Error(`unknown tool: ${name}`);
+          } catch (error) {
+            handlerFailed = true;
+            handlerError = error;
+          }
+          if (handlerFailed) {
+            await reportUsage({ calls: 1, successful: 0, failed: 1 });
+            output.write(`${errorResponse(request.id, handlerError)}\n`);
+          } else {
+            await reportUsage({ calls: 1, successful: 1, failed: 0 });
+            output.write(`${response(request.id, { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] })}\n`);
+          }
         }
       } catch (error) {
         output.write(`${errorResponse(request.id, error)}\n`);

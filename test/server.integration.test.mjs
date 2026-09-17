@@ -23,6 +23,19 @@ function sendProtocolRequest(startServer, request) {
   });
 }
 
+function heartbeatRequest(id, name, args = {}) {
+  return { jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } };
+}
+
+async function importServerForHeartbeatTest(kitHome, token) {
+  process.env.CODEX_ASYNC_KIT_HOME = kitHome;
+  process.env.GROVE_TOKEN = token;
+  process.env.BEINGS_TOWN_GROVE_TOKEN = "";
+  process.env.GROVE_API_BASE = "https://grove.test";
+  process.env.GROVE_KIT_ID = "test-kit";
+  return import(`../server.mjs?heartbeat-test=${Date.now()}-${Math.random()}`);
+}
+
 test("server run/resume remain immediate, schemas agree, and cancellation is durable", async () => {
   const kitHome = await mkdtemp(join(tmpdir(), "codex-server-"));
   const previousKitHome = process.env.CODEX_ASYNC_KIT_HOME;
@@ -98,6 +111,69 @@ test("server run/resume remain immediate, schemas agree, and cancellation is dur
     else process.env.GROVE_TOKEN = previousGroveToken;
     if (previousLegacyGroveToken === undefined) delete process.env.BEINGS_TOWN_GROVE_TOKEN;
     else process.env.BEINGS_TOWN_GROVE_TOKEN = previousLegacyGroveToken;
+    await rm(kitHome, { recursive: true, force: true });
+  }
+});
+
+test("tools/call heartbeats report one successful or failed result without affecting protocol responses", async () => {
+  const kitHome = await mkdtemp(join(tmpdir(), "codex-heartbeat-"));
+  const environment = Object.fromEntries(["CODEX_ASYNC_KIT_HOME", "GROVE_TOKEN", "BEINGS_TOWN_GROVE_TOKEN", "GROVE_API_BASE", "GROVE_KIT_ID"].map((name) => [name, process.env[name]]));
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  let responseOk = true;
+  globalThis.fetch = async (url, options) => {
+    requests.push({ url, options, body: JSON.parse(options.body) });
+    return { ok: responseOk, status: responseOk ? 200 : 503 };
+  };
+  try {
+    const server = await importServerForHeartbeatTest(kitHome, "test-token");
+
+    const successful = await sendProtocolRequest(server.startServer, heartbeatRequest(1, "list"));
+    assert.ok(successful.result);
+    assert.equal(requests.length, 1);
+    assert.deepEqual(requests[0].body.calls, 1);
+    assert.deepEqual(requests[0].body.successful, 1);
+    assert.deepEqual(requests[0].body.failed, 0);
+    assert.equal(requests[0].url, "https://grove.test/api/grove/test-kit/heartbeat");
+    assert.equal(requests[0].options.headers.Authorization, "Bearer test-token");
+
+    const unknownTool = await sendProtocolRequest(server.startServer, heartbeatRequest(2, "not-a-tool"));
+    assert.equal(unknownTool.error.code, -32000);
+    assert.match(unknownTool.error.message, /unknown tool: not-a-tool/);
+    assert.equal(requests.length, 2);
+    assert.deepEqual(requests[1].body.calls, 1);
+    assert.deepEqual(requests[1].body.successful, 0);
+    assert.deepEqual(requests[1].body.failed, 1);
+
+    responseOk = false;
+    const successfulWithRejectedHeartbeat = await sendProtocolRequest(server.startServer, heartbeatRequest(3, "list"));
+    assert.ok(successfulWithRejectedHeartbeat.result);
+    const failedWithRejectedHeartbeat = await sendProtocolRequest(server.startServer, heartbeatRequest(4, "still-not-a-tool"));
+    assert.equal(failedWithRejectedHeartbeat.error.code, -32000);
+    assert.equal(requests.length, 4);
+
+    const initialized = await sendProtocolRequest(server.startServer, { jsonrpc: "2.0", id: 5, method: "initialize", params: {} });
+    const listed = await sendProtocolRequest(server.startServer, { jsonrpc: "2.0", id: 6, method: "tools/list", params: {} });
+    assert.ok(initialized.result);
+    assert.ok(listed.result);
+    assert.equal(requests.length, 4);
+
+    for (const request of requests) {
+      assert.equal(request.body.calls, request.body.successful + request.body.failed);
+      assert.equal(request.body.calls, 1);
+      assert.match(request.body.last_used_at, /^\d{4}-\d{2}-\d{2}T/);
+    }
+
+    const noTokenServer = await importServerForHeartbeatTest(kitHome, "");
+    const withoutToken = await sendProtocolRequest(noTokenServer.startServer, heartbeatRequest(7, "list"));
+    assert.ok(withoutToken.result);
+    assert.equal(requests.length, 4);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [name, value] of Object.entries(environment)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
     await rm(kitHome, { recursive: true, force: true });
   }
 });

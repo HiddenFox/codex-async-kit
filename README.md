@@ -1,6 +1,6 @@
 # Codex Async Kit
 
-Current release: `1.1.3`.
+Current release: `1.1.4`.
 
 Codex Async Kit provides a durable async control plane for Codex CLI. Background `run` and `resume` calls return a fresh `job_id` immediately while a detached worker persists terminal results and Codex `session_id` values. Jobs can be inspected, cancelled, or resumed later; choose a per-job sandbox and either a Codex profile or model.
 
