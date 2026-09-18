@@ -78,7 +78,7 @@ test("round-trips URLSearchParams token encoding without manual concatenation", 
   assert.equal(callback.search, `?${new URLSearchParams({ token }).toString()}`);
 });
 
-test("delivers URLSearchParams-encoded tokens without an authorization header", async () => {
+test("delivers URLSearchParams-encoded tokens with an authorization header", async () => {
   const token = "space + ampersand & slash / equals = question ?";
   let received;
   const local = await localServer((request, response) => {
@@ -92,7 +92,7 @@ test("delivers URLSearchParams-encoded tokens without an authorization header", 
       config: deriveCallbackConfig(local.loomUrl),
       notification: { requested: true, state: "pending", attempts: 0 }
     });
-    assert.deepEqual(received, { token, authorization: undefined });
+    assert.deepEqual(received, { token, authorization: `Bearer ${token}` });
   } finally {
     await local.close();
   }
@@ -141,7 +141,7 @@ test("builds bounded payloads with stable identity and UTF-8-safe previews", () 
   assert.match(failed.payload.result.last_message_preview, /inspect status/);
 });
 
-test("sends the token in the query without an authorization header and persists a redacted success", async () => {
+test("sends the token in the query with an authorization header and persists a redacted success", async () => {
   let requestRecord;
   const local = await localServer(async (request, response) => {
     let body = "";
@@ -164,7 +164,7 @@ test("sends the token in the query without an authorization header and persists 
     assert.equal(requestUrl.pathname, "/test-being/api/callback");
     assert.equal(requestUrl.searchParams.get("token"), PLACEHOLDER_TOKEN);
     assert.equal(requestUrl.searchParams.size, 1);
-    assert.equal(requestRecord.authorization, undefined);
+    assert.equal(requestRecord.authorization, `Bearer ${PLACEHOLDER_TOKEN}`);
     assert.equal(JSON.parse(requestRecord.body).task_id, sampleJob().job_id);
     assert.ok(!JSON.stringify({ result, events }).includes(PLACEHOLDER_TOKEN));
     assert.ok(!JSON.stringify({ result, events }).includes(config.callbackUrl));
@@ -228,7 +228,7 @@ test("contains localhost redirects without following the target", async () => {
     });
     assert.equal(callbackRequests, 1);
     assert.equal(sinkRequests, 0);
-    assert.equal(authorization, undefined);
+    assert.equal(authorization, `Bearer ${PLACEHOLDER_TOKEN}`);
     assert.equal(result.state, "failed");
     assert.equal(result.attempts, 1);
     assert.equal(result.http_status, 302);
@@ -239,11 +239,11 @@ test("contains localhost redirects without following the target", async () => {
   }
 });
 
-test("version metadata is consistent at 1.1.4", async () => {
+test("version metadata is consistent at 1.1.5", async () => {
   const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
   const manifestJson = JSON.parse(await readFile(new URL("../manifest.json", import.meta.url), "utf8"));
-  assert.equal(packageJson.version, "1.1.4");
-  assert.equal(manifestJson.version, "1.1.4");
+  assert.equal(packageJson.version, "1.1.5");
+  assert.equal(manifestJson.version, "1.1.5");
 });
 
 for (const status of [400, 401, 403, 413]) {

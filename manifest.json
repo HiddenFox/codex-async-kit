@@ -1,6 +1,6 @@
 {
   "name": "codex-async",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Codex CLI with a durable async control plane: background jobs return immediately with a job_id, persist terminal results and session IDs, and can be inspected, cancelled, or resumed later. On completion, an optional Heart callback delivers a durable Inbox notification so the owning Being can return to review the job instead of polling. Supports Codex profiles and per-job sandboxes. The Inbox notification is a signal; status(job_id) remains authoritative.",
   "transport": "stdio",
   "eager": true,

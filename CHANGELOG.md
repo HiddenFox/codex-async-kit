@@ -1,5 +1,9 @@
 # Release notes
 
+## 1.1.5
+
+- Callback delivery now also sends an `Authorization: Bearer <token>` header alongside the existing URL query token. The query token is retained because the current Heart callback endpoint authenticates from the query parameter only (verified 2026-09-18); once Heart accepts header authentication, a future release can drop the URL token and keep it out of proxy and server access logs.
+
 ## 1.1.4
 
 - Grove heartbeat now reports each terminal MCP tools/call as calls=1 plus explicit successful/failed counts (success: 1/0; failure: 0/1); heartbeat delivery remains best-effort and asynchronous Codex job terminal states are not double-counted.

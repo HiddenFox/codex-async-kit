@@ -182,7 +182,7 @@ export async function deliverCallback({
     try {
       response = await fetchImpl(config.callbackUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.token}` },
         body: built.body,
         redirect: "manual",
         signal: controller.signal
