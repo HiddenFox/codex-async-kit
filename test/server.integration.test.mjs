@@ -119,10 +119,18 @@ test("tools/call heartbeats report one successful or failed result without affec
   const kitHome = await mkdtemp(join(tmpdir(), "codex-heartbeat-"));
   const environment = Object.fromEntries(["CODEX_ASYNC_KIT_HOME", "GROVE_TOKEN", "BEINGS_TOWN_GROVE_TOKEN", "GROVE_API_BASE", "GROVE_KIT_ID"].map((name) => [name, process.env[name]]));
   const originalFetch = globalThis.fetch;
+  const originalStderrWrite = process.stderr.write;
   const requests = [];
+  const diagnostics = [];
   let responseOk = true;
+  let networkFailure = false;
+  process.stderr.write = (chunk) => {
+    diagnostics.push(String(chunk));
+    return true;
+  };
   globalThis.fetch = async (url, options) => {
     requests.push({ url, options, body: JSON.parse(options.body) });
+    if (networkFailure) throw new Error("mock network failure");
     return { ok: responseOk, status: responseOk ? 200 : 503 };
   };
   try {
@@ -151,12 +159,20 @@ test("tools/call heartbeats report one successful or failed result without affec
     const failedWithRejectedHeartbeat = await sendProtocolRequest(server.startServer, heartbeatRequest(4, "still-not-a-tool"));
     assert.equal(failedWithRejectedHeartbeat.error.code, -32000);
     assert.equal(requests.length, 4);
+    assert.ok(diagnostics.some((message) => message.includes("usage report failed: heartbeat HTTP 503")));
 
-    const initialized = await sendProtocolRequest(server.startServer, { jsonrpc: "2.0", id: 5, method: "initialize", params: {} });
-    const listed = await sendProtocolRequest(server.startServer, { jsonrpc: "2.0", id: 6, method: "tools/list", params: {} });
+    responseOk = true;
+    networkFailure = true;
+    const successfulWithNetworkFailure = await sendProtocolRequest(server.startServer, heartbeatRequest(5, "list"));
+    assert.ok(successfulWithNetworkFailure.result);
+    assert.equal(requests.length, 5);
+    assert.ok(diagnostics.some((message) => message.includes("usage report failed: network error")));
+
+    const initialized = await sendProtocolRequest(server.startServer, { jsonrpc: "2.0", id: 6, method: "initialize", params: {} });
+    const listed = await sendProtocolRequest(server.startServer, { jsonrpc: "2.0", id: 7, method: "tools/list", params: {} });
     assert.ok(initialized.result);
     assert.ok(listed.result);
-    assert.equal(requests.length, 4);
+    assert.equal(requests.length, 5);
 
     for (const request of requests) {
       assert.equal(request.body.calls, request.body.successful + request.body.failed);
@@ -165,11 +181,13 @@ test("tools/call heartbeats report one successful or failed result without affec
     }
 
     const noTokenServer = await importServerForHeartbeatTest(kitHome, "");
-    const withoutToken = await sendProtocolRequest(noTokenServer.startServer, heartbeatRequest(7, "list"));
+    const withoutToken = await sendProtocolRequest(noTokenServer.startServer, heartbeatRequest(8, "list"));
     assert.ok(withoutToken.result);
-    assert.equal(requests.length, 4);
+    assert.equal(requests.length, 5);
+    assert.ok(diagnostics.some((message) => message.includes("usage report skipped: GROVE_TOKEN not configured")));
   } finally {
     globalThis.fetch = originalFetch;
+    process.stderr.write = originalStderrWrite;
     for (const [name, value] of Object.entries(environment)) {
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;

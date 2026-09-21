@@ -1,5 +1,9 @@
 # Release notes
 
+## 1.1.6
+
+- Usage report skips now leave a stderr trace, and the configuration documentation explains the behavior.
+
 ## 1.1.5
 
 - Callback delivery now also sends an `Authorization: Bearer <token>` header alongside the existing URL query token. The query token is retained because the current Heart callback endpoint authenticates from the query parameter only (verified 2026-09-18); once Heart accepts header authentication, a future release can drop the URL token and keep it out of proxy and server access logs.

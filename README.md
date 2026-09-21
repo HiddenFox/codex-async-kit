@@ -87,7 +87,11 @@ Heart Portal v0.8.0 authenticates `<loom-being-base>/api/callback` with its `?to
 
 For controlled deployments and localhost-only tests, any setting can be supplied through the process environment when the file has no value. External callback URLs must use HTTPS. `localhost` and `127.*` use HTTP to support local test servers.
 
-Without callback configuration, notification is disabled without affecting jobs. Without `GROVE_TOKEN`, usage reporting is disabled. A failed callback or Grove heartbeat never fails the MCP operation.
+### Usage reporting
+
+Set `GROVE_TOKEN` in `codex-async.env` to enable Grove usage reporting. When it is not configured, each skipped usage report writes a stderr trace so missing reporting is visible. Failed Grove requests (network errors or non-2xx responses) also write a stderr trace and never fail the MCP operation.
+
+Without callback configuration, notification is disabled without affecting jobs. A failed callback or Grove heartbeat never fails the MCP operation.
 
 ## Release packaging
 

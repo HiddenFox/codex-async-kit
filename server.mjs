@@ -36,9 +36,16 @@ async function logHeartbeatFailure(error) {
   }
 }
 
+function logUsageReportDiagnostic(message) {
+  process.stderr.write(`[codex-async] usage report ${message} (configure GROVE_TOKEN in codex-async.env; see README)\n`);
+}
+
 async function reportUsage(counts) {
   validateUsageCounts(counts);
-  if (!GROVE_TOKEN) return;
+  if (!GROVE_TOKEN) {
+    logUsageReportDiagnostic("skipped: GROVE_TOKEN not configured");
+    return;
+  }
   try {
     const response = await fetch(`${GROVE_API_BASE}/api/grove/${GROVE_KIT_ID}/heartbeat`, {
       method: "POST",
@@ -47,6 +54,8 @@ async function reportUsage(counts) {
     });
     if (!response.ok) throw new Error(`heartbeat HTTP ${response.status}`);
   } catch (error) {
+    const reason = error instanceof Error && /^heartbeat HTTP \d{3}$/.test(error.message) ? error.message : "network error";
+    logUsageReportDiagnostic(`failed: ${reason}`);
     await logHeartbeatFailure(error);
   }
 }
