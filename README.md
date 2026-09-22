@@ -1,6 +1,6 @@
 # Codex Async Kit
 
-Current release: `1.1.4`.
+Current release: `1.1.7`.
 
 Codex Async Kit provides a durable async control plane for Codex CLI. Background `run` and `resume` calls return a fresh `job_id` immediately while a detached worker persists terminal results and Codex `session_id` values. Jobs can be inspected, cancelled, or resumed later; choose a per-job sandbox and either a Codex profile or model.
 
@@ -67,7 +67,7 @@ A successful callback means Heart acknowledged the completion signal. It does no
 
 ## Private configuration
 
-Copy `codex-async.env.example` to the Kit directory as `codex-async.env`:
+After installation, you **must** copy `codex-async.env.example` to the Kit directory as `codex-async.env` and configure your own `GROVE_TOKEN` before using the kit:
 
 - Windows: `%USERPROFILE%\.heart-portal\kits\codex-async\codex-async.env`
 - macOS/Linux: `~/.heart-portal/kits/codex-async/codex-async.env`
@@ -89,7 +89,7 @@ For controlled deployments and localhost-only tests, any setting can be supplied
 
 ### Usage reporting
 
-Set `GROVE_TOKEN` in `codex-async.env` to enable Grove usage reporting. When it is not configured, each skipped usage report writes a stderr trace so missing reporting is visible. Failed Grove requests (network errors or non-2xx responses) also write a stderr trace and never fail the MCP operation.
+Set your own `GROVE_TOKEN` in `codex-async.env` during post-install. This is required for Grove usage reporting; if it is missing, reports are skipped and each skip writes a stderr trace so the incomplete setup is visible. Failed Grove requests (network errors or non-2xx responses) also write a stderr trace and never fail the MCP operation.
 
 Without callback configuration, notification is disabled without affecting jobs. A failed callback or Grove heartbeat never fails the MCP operation.
 

@@ -1,6 +1,6 @@
 {
   "name": "codex-async",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Codex CLI with a durable async control plane: background jobs return immediately with a job_id, persist terminal results and session IDs, and can be inspected, cancelled, or resumed later. On completion, an optional Heart callback delivers a durable Inbox notification so the owning Being can return to review the job instead of polling. Supports Codex profiles and per-job sandboxes. The Inbox notification is a signal; status(job_id) remains authoritative.",
   "transport": "stdio",
   "eager": true,
@@ -10,17 +10,17 @@
     "env": [
       {
         "name": "GROVE_TOKEN",
-        "description": "Optional Grove Bearer token of the installer. Use your own token; never reuse the publisher token.",
+        "description": "Grove Bearer token of the installer. Configure this with your own token during post-install; never reuse the publisher token.",
         "required": false
       },
       {
         "name": "GROVE_KIT_ID",
-        "description": "Optional Grove kit ID. Defaults to the published codex-async kit.",
+        "description": "Grove kit ID. Defaults to the published codex-async kit.",
         "required": false
       },
       {
         "name": "GROVE_API_BASE",
-        "description": "Optional Grove API host for testing. Defaults to https://beings.town.",
+        "description": "Grove API host. Defaults to https://beings.town; override only for testing.",
         "required": false
       },
       {
@@ -30,7 +30,7 @@
       }
     ],
     "platforms": ["windows", "macos", "linux"],
-    "post_install": "After extraction, copy codex-async.env.example to codex-async.env in the Kit directory, fill only the optional Grove reporting and Heart callback values you use, then restart Portal. This private file must never be committed or shared. The kit runs without it; the corresponding optional integrations are then disabled."
+    "post_install": "After extraction, you MUST copy codex-async.env.example to codex-async.env in the Kit directory and configure your own GROVE_TOKEN before using this kit. Do not skip Grove token setup: without it, usage reporting is disabled and this installation will not contribute usage data. Configure CODEX_ASYNC_LOOM_URL as well if you use Heart completion callbacks. Then restart Portal. This private file must never be committed or shared, and the publisher token must never be reused."
   },
   "tools": [
     {

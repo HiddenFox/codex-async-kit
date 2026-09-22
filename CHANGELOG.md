@@ -1,5 +1,9 @@
 # Release notes
 
+## 1.1.7
+
+- Strengthened post-install guidance: configure the installer's own `GROVE_TOKEN` before using the kit so usage reporting is not silently omitted.
+
 ## 1.1.6
 
 - Usage report skips now leave a stderr trace, and the configuration documentation explains the behavior.
