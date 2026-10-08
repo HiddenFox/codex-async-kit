@@ -94,14 +94,15 @@ function initialNotification(requested, state) {
   return { requested, state, attempts: 0, last_attempt_at: null, delivered_at: null, http_status: null, last_error: null };
 }
 
-export async function startJob({ prompt, cwd, model, profile, sandbox, notify = true, sessionId = null, parentJobId = null }, options = {}) {
+export async function startJob({ prompt, cwd, model, profile, sandbox, skip_git_check = false, notify = true, sessionId = null, parentJobId = null }, options = {}) {
   if (!prompt || typeof prompt !== "string") throw new Error("prompt is required");
   if (typeof notify !== "boolean") throw new Error("notify must be a boolean");
+  if (typeof skip_git_check !== "boolean") throw new Error("skip_git_check must be a boolean");
   if (model && profile) throw new Error("model and profile are mutually exclusive");
   if (profile && (!/^[a-z0-9_-]+$/i.test(profile))) throw new Error("profile must contain only letters, numbers, underscores, or hyphens");
   const job = {
     job_id: `codex-${randomUUID()}`, state: "queued", created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    cwd: validateCwd(cwd), model: model || null, profile: profile || null, sandbox: sandbox || DEFAULT_SANDBOX, prompt, notify,
+    cwd: validateCwd(cwd), model: model || null, profile: profile || null, sandbox: sandbox || DEFAULT_SANDBOX, skip_git_check, prompt, notify,
     parent_job_id: parentJobId, resumed_from: sessionId, session_id: sessionId, last_message: null,
     error: null, exit_code: null, usage: null, events: []
   };
@@ -116,9 +117,9 @@ export async function startJob({ prompt, cwd, model, profile, sandbox, notify = 
   await logEvent(job.job_id, "worker.spawned", { worker_pid: worker.pid });
   return compactJob(job);
 }
-export async function resumeJob({ sessionId, prompt, cwd, model, profile, sandbox, notify = true }, options = {}) {
+export async function resumeJob({ sessionId, prompt, cwd, model, profile, sandbox, skip_git_check = false, notify = true }, options = {}) {
   if (!sessionId || typeof sessionId !== "string") throw new Error("resume requires a Codex session_id");
-  return startJob({ prompt, cwd, model, profile, sandbox, notify, sessionId }, options);
+  return startJob({ prompt, cwd, model, profile, sandbox, skip_git_check, notify, sessionId }, options);
 }
 export async function listJobs(limit = 20) {
   await ensureStorage();
@@ -150,8 +151,8 @@ export async function cancelJob(jobId) {
   return compactJob(job);
 }
 export const tools = [
-  { name: "run", description: "Start a persistent Codex job in the background. Returns job_id immediately; use status for the authoritative result.", inputSchema: { type: "object", properties: { prompt: { type: "string" }, cwd: { type: "string" }, model: { type: "string", description: "Optional Codex model; mutually exclusive with profile" }, profile: { type: "string", description: "Optional Codex profile; mutually exclusive with model" }, sandbox: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"] }, notify: { type: "boolean", default: true, description: "Send a completion notification when configured" } }, required: ["prompt", "cwd"] } },
-  { name: "resume", description: "Start a new background job that continues a Codex session. Returns job_id immediately; use status for the authoritative result.", inputSchema: { type: "object", properties: { session_id: { type: "string", description: "Codex session_id returned in a prior job status" }, prompt: { type: "string" }, cwd: { type: "string" }, model: { type: "string", description: "Optional Codex model; mutually exclusive with profile" }, profile: { type: "string", description: "Optional Codex profile; mutually exclusive with model" }, sandbox: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"] }, notify: { type: "boolean", default: true, description: "Send a completion notification when configured" } }, required: ["session_id", "prompt", "cwd"] } },
+  { name: "run", description: "Start a persistent Codex job in the background. Returns job_id immediately; use status for the authoritative result.", inputSchema: { type: "object", properties: { prompt: { type: "string" }, cwd: { type: "string" }, model: { type: "string", description: "Optional Codex model; mutually exclusive with profile" }, profile: { type: "string", description: "Optional Codex profile; mutually exclusive with model" }, sandbox: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"] }, skip_git_check: { type: "boolean", default: false, description: "Skip Codex git-repository check so the job can run in a non-git directory (forfeits git rollback protection)" }, notify: { type: "boolean", default: true, description: "Send a completion notification when configured" } }, required: ["prompt", "cwd"] } },
+  { name: "resume", description: "Start a new background job that continues a Codex session. Returns job_id immediately; use status for the authoritative result.", inputSchema: { type: "object", properties: { session_id: { type: "string", description: "Codex session_id returned in a prior job status" }, prompt: { type: "string" }, cwd: { type: "string" }, model: { type: "string", description: "Optional Codex model; mutually exclusive with profile" }, profile: { type: "string", description: "Optional Codex profile; mutually exclusive with model" }, sandbox: { type: "string", enum: ["read-only", "workspace-write", "danger-full-access"] }, skip_git_check: { type: "boolean", default: false, description: "Skip Codex git-repository check so the job can run in a non-git directory (forfeits git rollback protection)" }, notify: { type: "boolean", default: true, description: "Send a completion notification when configured" } }, required: ["session_id", "prompt", "cwd"] } },
   { name: "status", description: "Read current status for a Codex job.", inputSchema: { type: "object", properties: { job_id: { type: "string" } }, required: ["job_id"] } },
   { name: "list", description: "List recent Codex jobs.", inputSchema: { type: "object", properties: { limit: { type: "number" } } } },
   { name: "cancel", description: "Stop an active Codex job.", inputSchema: { type: "object", properties: { job_id: { type: "string" } }, required: ["job_id"] } }
@@ -166,7 +167,7 @@ export function startServer(input = process.stdin, output = process.stdout) {
       if (!line.trim()) continue;
       let request; try { request = JSON.parse(line); } catch { continue; }
       try {
-        if (request.method === "initialize") output.write(`${response(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "codex-async", version: "1.1.8" } })}\n`);
+        if (request.method === "initialize") output.write(`${response(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "codex-async", version: "1.1.9" } })}\n`);
         else if (request.method === "tools/list") output.write(`${response(request.id, { tools })}\n`);
         else if (request.method === "tools/call") {
           let result;
@@ -175,7 +176,7 @@ export function startServer(input = process.stdin, output = process.stdout) {
           try {
             const { name, arguments: args = {} } = request.params;
             if (name === "run") result = await startJob(args);
-            else if (name === "resume") result = await resumeJob({ sessionId: args.session_id, prompt: args.prompt, cwd: args.cwd, model: args.model, profile: args.profile, sandbox: args.sandbox, notify: args.notify });
+            else if (name === "resume") result = await resumeJob({ sessionId: args.session_id, prompt: args.prompt, cwd: args.cwd, model: args.model, profile: args.profile, sandbox: args.sandbox, skip_git_check: args.skip_git_check, notify: args.notify });
             else if (name === "status") result = compactJob(await loadJob(args.job_id));
             else if (name === "list") result = await listJobs(args.limit);
             else if (name === "cancel") result = await cancelJob(args.job_id);

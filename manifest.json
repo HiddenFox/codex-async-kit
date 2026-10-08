@@ -1,6 +1,6 @@
 {
   "name": "codex-async",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "Codex CLI with a durable async control plane: background jobs return immediately with a job_id, persist terminal results and session IDs, and can be inspected, cancelled, or resumed later. On completion, an optional Heart callback delivers a durable Inbox notification so the owning Being can return to review the job instead of polling. Supports Codex profiles and per-job sandboxes. The Inbox notification is a signal; status(job_id) remains authoritative.",
   "transport": "stdio",
   "eager": true,
@@ -44,6 +44,7 @@
           "model": { "type": "string", "description": "Optional Codex model; mutually exclusive with profile" },
           "profile": { "type": "string", "description": "Optional Codex profile passed as codex exec -p <profile>; mutually exclusive with model" },
           "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"] },
+          "skip_git_check": { "type": "boolean", "default": false, "description": "Skip Codex git-repository check so the job can run in a non-git directory (forfeits git rollback protection)" },
           "notify": { "type": "boolean", "default": true, "description": "Send a completion notification when configured" }
         },
         "required": ["prompt", "cwd"]
@@ -61,6 +62,7 @@
           "model": { "type": "string", "description": "Optional Codex model; mutually exclusive with profile" },
           "profile": { "type": "string", "description": "Optional Codex profile passed as codex exec -p <profile>; mutually exclusive with model" },
           "sandbox": { "type": "string", "enum": ["read-only", "workspace-write", "danger-full-access"], "description": "Optional sandbox mode" },
+          "skip_git_check": { "type": "boolean", "default": false, "description": "Skip Codex git-repository check so the job can run in a non-git directory (forfeits git rollback protection)" },
           "notify": { "type": "boolean", "default": true, "description": "Send a completion notification when configured" }
         },
         "required": ["session_id", "prompt", "cwd"]

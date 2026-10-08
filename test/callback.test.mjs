@@ -239,11 +239,11 @@ test("contains localhost redirects without following the target", async () => {
   }
 });
 
-test("version metadata is consistent at 1.1.8", async () => {
+test("version metadata is consistent at 1.1.9", async () => {
   const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
   const manifestJson = JSON.parse(await readFile(new URL("../manifest.json", import.meta.url), "utf8"));
-  assert.equal(packageJson.version, "1.1.8");
-  assert.equal(manifestJson.version, "1.1.8");
+  assert.equal(packageJson.version, "1.1.9");
+  assert.equal(manifestJson.version, "1.1.9");
 });
 
 for (const status of [400, 401, 403, 413]) {

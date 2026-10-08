@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import test from "node:test";
-import { runWorker } from "../worker.mjs";
+import { codexArgs, runWorker } from "../worker.mjs";
 
 const PLACEHOLDER_TOKEN = "worker-placeholder-token";
 
@@ -306,4 +306,19 @@ test("cancellation that wins during process startup remains suppressed", async (
     await fixture.cleanup();
     await server.close();
   }
+});
+
+test("codexArgs keeps the git-repo check on by default and honors skip_git_check", () => {
+  const base = { profile: null, sandbox: "read-only", model: null, cwd: "D:\\tmp", prompt: "p" };
+  const fresh = codexArgs({ ...base });
+  assert.ok(!fresh.includes("--skip-git-repo-check"));
+  assert.ok(fresh.includes("--cd"));
+  const skipped = codexArgs({ ...base, skip_git_check: true });
+  assert.ok(skipped.includes("--skip-git-repo-check"));
+  const resumedDefault = codexArgs({ ...base, resumed_from: "session-1" });
+  assert.ok(!resumedDefault.includes("--skip-git-repo-check"));
+  assert.ok(resumedDefault.indexOf("sandbox_mode=\"read-only\"") > resumedDefault.indexOf("resume"));
+  const resumedSkipped = codexArgs({ ...base, skip_git_check: true, resumed_from: "session-1" });
+  assert.ok(resumedSkipped.includes("--skip-git-repo-check"));
+  assert.ok(resumedSkipped.indexOf("sandbox_mode=\"read-only\"") > resumedSkipped.indexOf("resume"));
 });

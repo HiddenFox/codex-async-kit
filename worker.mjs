@@ -19,18 +19,19 @@ function codexExecutable() {
   return join(process.env.APPDATA, "npm", "node_modules", "@openai", "codex", "node_modules", "@openai", "codex-win32-x64", "vendor", "x86_64-pc-windows-msvc", "bin", "codex.exe");
 }
 
-function codexArgs(job) {
+export function codexArgs(job) {
   const profile = job.profile ? ["-p", job.profile] : [];
   const sandbox = job.sandbox || DEFAULT_SANDBOX;
   const sandboxConfig = ["-c", `sandbox_mode="${sandbox}"`];
+  const skipGitCheck = job.skip_git_check ? ["--skip-git-repo-check"] : [];
   if (job.resumed_from) {
     // Fix (1.1.8): -c before the `resume` subcommand token is parsed by the parent
     // `exec` and silently dropped for resumed sessions, which then run under the
     // default workspace-write sandbox. sandbox_mode must be passed as an option of
     // the `resume` subcommand itself. (Bug report: Ripple, 2026-09-29.)
-    return ["exec", ...profile, "resume", "--json", "--skip-git-repo-check", ...sandboxConfig, "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.resumed_from, job.prompt];
+    return ["exec", ...profile, "resume", "--json", ...skipGitCheck, ...sandboxConfig, "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.resumed_from, job.prompt];
   }
-  return ["exec", ...profile, "--json", "--skip-git-repo-check", "--cd", job.cwd, "--sandbox", sandbox, "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.prompt];
+  return ["exec", ...profile, "--json", ...skipGitCheck, "--cd", job.cwd, "--sandbox", sandbox, "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.prompt];
 }
 
 function updateFromCodexEvent(job, item) {

@@ -1,5 +1,9 @@
 # Release notes
 
+## 1.1.9
+
+- `--skip-git-repo-check` is no longer hardcoded: Codex's git-repository check is back on by default, and `skip_git_check` is now an opt-in boolean parameter on both `run` and `resume` for jobs that must run in non-git working directories (forfeits git rollback protection). (Direction: Frank, 2026-10-08.)
+
 ## 1.1.8
 
 - Fixed resumed sessions ignoring the requested sandbox mode: `-c sandbox_mode=...` placed before the `resume` subcommand token was parsed by the parent `exec` and silently dropped, so resumed jobs always ran under the default `workspace-write` sandbox. The setting is now passed as an option of the `resume` subcommand itself. (Bug report: Ripple, 2026-09-29.)

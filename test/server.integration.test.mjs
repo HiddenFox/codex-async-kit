@@ -52,7 +52,7 @@ test("server run/resume remain immediate, schemas agree, and cancellation is dur
       method: "initialize",
       params: { protocolVersion: "2024-11-05" }
     });
-    assert.equal(initialized.result.serverInfo.version, "1.1.8");
+    assert.equal(initialized.result.serverInfo.version, "1.1.9");
 
     const manifest = JSON.parse(await readFile(resolve("manifest.json"), "utf8"));
     for (const name of ["run", "resume"]) {
@@ -60,6 +60,7 @@ test("server run/resume remain immediate, schemas agree, and cancellation is dur
       const manifestProperties = Object.keys(manifest.tools.find((tool) => tool.name === name).params.properties).sort();
       assert.deepEqual(runtimeProperties, manifestProperties);
       assert.equal(server.tools.find((tool) => tool.name === name).inputSchema.properties.notify.default, true);
+      assert.equal(server.tools.find((tool) => tool.name === name).inputSchema.properties.skip_git_check.default, false);
     }
 
     const startedAt = Date.now();
@@ -70,6 +71,7 @@ test("server run/resume remain immediate, schemas agree, and cancellation is dur
     assert.ok(Date.now() - startedAt < 500);
     assert.equal(started.state, "queued");
     assert.equal(started.notify, true);
+    assert.equal(started.skip_git_check, false);
     const statusResponse = await sendProtocolRequest(server.startServer, {
       jsonrpc: "2.0",
       id: 2,
@@ -82,12 +84,13 @@ test("server run/resume remain immediate, schemas agree, and cancellation is dur
 
     const resumedAt = Date.now();
     const resumed = await server.resumeJob(
-      { sessionId: "session-placeholder", cwd: kitHome, prompt: "Test resume", notify: false },
+      { sessionId: "session-placeholder", cwd: kitHome, prompt: "Test resume", skip_git_check: true, notify: false },
       { spawnImpl: fakeWorkerSpawn }
     );
     assert.ok(Date.now() - resumedAt < 500);
     assert.equal(resumed.resumed_from, "session-placeholder");
     assert.equal(resumed.notify, false);
+    assert.equal(resumed.skip_git_check, true);
 
     const jobs = await server.listJobs(10);
     assert.ok(jobs.some((job) => job.job_id === started.job_id));
@@ -103,6 +106,10 @@ test("server run/resume remain immediate, schemas agree, and cancellation is dur
     await assert.rejects(
       server.startJob({ cwd: kitHome, prompt: "Invalid notify", notify: "yes" }, { spawnImpl: fakeWorkerSpawn }),
       /notify must be a boolean/
+    );
+    await assert.rejects(
+      server.startJob({ cwd: kitHome, prompt: "Invalid skip_git_check", skip_git_check: "yes" }, { spawnImpl: fakeWorkerSpawn }),
+      /skip_git_check must be a boolean/
     );
   } finally {
     if (previousKitHome === undefined) delete process.env.CODEX_ASYNC_KIT_HOME;
