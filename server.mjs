@@ -166,7 +166,7 @@ export function startServer(input = process.stdin, output = process.stdout) {
       if (!line.trim()) continue;
       let request; try { request = JSON.parse(line); } catch { continue; }
       try {
-        if (request.method === "initialize") output.write(`${response(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "codex-async", version: "1.1.3" } })}\n`);
+        if (request.method === "initialize") output.write(`${response(request.id, { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "codex-async", version: "1.1.8" } })}\n`);
         else if (request.method === "tools/list") output.write(`${response(request.id, { tools })}\n`);
         else if (request.method === "tools/call") {
           let result;

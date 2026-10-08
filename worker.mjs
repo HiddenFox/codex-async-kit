@@ -24,9 +24,13 @@ function codexArgs(job) {
   const sandbox = job.sandbox || DEFAULT_SANDBOX;
   const sandboxConfig = ["-c", `sandbox_mode="${sandbox}"`];
   if (job.resumed_from) {
-    return ["exec", ...profile, ...sandboxConfig, "resume", "--json", "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.resumed_from, job.prompt];
+    // Fix (1.1.8): -c before the `resume` subcommand token is parsed by the parent
+    // `exec` and silently dropped for resumed sessions, which then run under the
+    // default workspace-write sandbox. sandbox_mode must be passed as an option of
+    // the `resume` subcommand itself. (Bug report: Ripple, 2026-09-29.)
+    return ["exec", ...profile, "resume", "--json", "--skip-git-repo-check", ...sandboxConfig, "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.resumed_from, job.prompt];
   }
-  return ["exec", ...profile, "--json", "--cd", job.cwd, "--sandbox", sandbox, "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.prompt];
+  return ["exec", ...profile, "--json", "--skip-git-repo-check", "--cd", job.cwd, "--sandbox", sandbox, "-c", "approval_policy=never", ...(job.model ? ["--model", job.model] : []), job.prompt];
 }
 
 function updateFromCodexEvent(job, item) {

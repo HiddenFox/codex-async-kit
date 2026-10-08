@@ -1,5 +1,10 @@
 # Release notes
 
+## 1.1.8
+
+- Fixed resumed sessions ignoring the requested sandbox mode: `-c sandbox_mode=...` placed before the `resume` subcommand token was parsed by the parent `exec` and silently dropped, so resumed jobs always ran under the default `workspace-write` sandbox. The setting is now passed as an option of the `resume` subcommand itself. (Bug report: Ripple, 2026-09-29.)
+- Added `--skip-git-repo-check` to both `exec` and `resume` so the kit can run in non-git working directories (e.g. data-eval workspaces) instead of failing with "Not inside a trusted directory".
+
 ## 1.1.7
 
 - Strengthened post-install guidance: configure the installer's own `GROVE_TOKEN` before using the kit so usage reporting is not silently omitted.

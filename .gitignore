@@ -4,3 +4,4 @@ target/
 .env*
 codex-async.env
 # Legacy local configuration names; migrate their values to codex-async.env.
+tmp/
