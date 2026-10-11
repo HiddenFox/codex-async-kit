@@ -15,12 +15,15 @@ jobs:
           qemu-aarch64-static --version | head -1
       - name: run smoke
         run: |
-          chmod +x heart-portal-pie4
+          chmod +x heart-portal-pie4 hello-pie
           {
             echo "runner=$(uname -a)"
             echo "sha=$(git rev-parse HEAD)"
             echo "--- file(1) ---"
-            file heart-portal-pie4
+            file heart-portal-pie4 hello-pie
+            echo "--- hello (differential binary) ---"
+            qemu-aarch64-static ./hello-pie
+            echo "HELLO_EXIT=$?"
             echo "--- status ---"
             qemu-aarch64-static ./heart-portal-pie4 status
             echo "STATUS_EXIT=$?"
