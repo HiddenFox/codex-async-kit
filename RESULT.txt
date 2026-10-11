@@ -1,7 +1,11 @@
 runner=Linux runnervmmprz5 6.17.0-1022-azure #22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
-sha=fd6e1f95bdfc61cc70411a3c64851eb41c426b37
+sha=42d9b258902e13ecf9973384e76e9635cfa5194d
 --- file(1) ---
 heart-portal-pie4: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), static-pie linked, not stripped
+hello-pie:         ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), static-pie linked, not stripped
+--- hello (differential binary) ---
+hello-pie ok
+HELLO_EXIT=0
 --- status ---
 Portal is not running.
 No service manager on this platform; start Portal in the foreground with `heart-portal`.
