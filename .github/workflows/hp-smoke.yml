@@ -1,0 +1,38 @@
+name: hp-android-smoke
+on:
+  push:
+    branches: [hp-android-smoke]
+permissions:
+  contents: write
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ensure qemu-user-static
+        run: |
+          command -v qemu-aarch64-static >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y -qq qemu-user-static)
+          qemu-aarch64-static --version | head -1
+      - name: run smoke
+        run: |
+          chmod +x heart-portal-pie4
+          {
+            echo "runner=$(uname -a)"
+            echo "sha=$(git rev-parse HEAD)"
+            echo "--- file(1) ---"
+            file heart-portal-pie4
+            echo "--- status ---"
+            qemu-aarch64-static ./heart-portal-pie4 status
+            echo "STATUS_EXIT=$?"
+            echo "--- stop ---"
+            qemu-aarch64-static ./heart-portal-pie4 stop
+            echo "STOP_EXIT=$?"
+          } > RESULT.txt 2>&1 || echo "SHELL_EXIT=$?" >> RESULT.txt
+          cat RESULT.txt
+      - name: push result
+        run: |
+          git config user.name ci-bot
+          git config user.email ci-bot@users.noreply.github.com
+          git add RESULT.txt
+          git commit -m "smoke result" || echo "nothing to commit"
+          git push
